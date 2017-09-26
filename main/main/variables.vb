@@ -7,6 +7,6 @@
         Property sampleRate As Integer = "44100" 'Typically 44100 Hz
         Property languageCode As String = "en-UK"
         Property enableWordTimeOffsets As Boolean = False
-        Property uri As String 'Replace https://storage.googleapis.com/ with gs://
+        Property bucket As String = "lr_test_transcript" 'If done manually, replace https://storage.googleapis.com/ with gs://
     End Class
 End Module

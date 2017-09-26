@@ -1,12 +1,16 @@
-﻿Public Class main
+﻿'To Do
+'Prompt to specify the bucket for the uri
+'Detect if first launch to prompt location of ffmpeg
+'Fix complete msgbox showing before ffmpeg finishes
+
+Public Class main
     Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click
         If ofdSelectTrack.ShowDialog() = System.Windows.Forms.DialogResult.OK Then 'Enable controls
-            Dim bucket As String = "lr_test_transcript" 'Where the file will be stored
             Dim track As New track
-            MsgBox(My.Resources.template.ToString)
             track.name = IO.Path.GetFileNameWithoutExtension(ofdSelectTrack.FileName)
             Process.Start("cmd", String.Format("/k {0} & {1}", ffmpegPath & "ffmpeg -i " & ofdSelectTrack.FileName & " -ar " & track.sampleRate & " -ac 1 " & IO.Path.GetDirectoryName(ofdSelectTrack.FileName) & "\" & IO.Path.GetFileNameWithoutExtension(ofdSelectTrack.FileName) & ".flac", "exit")) 'MP3 to FLAC conversion
-            generateFile(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileName(ofdSelectTrack.FileName) & """" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(ofdSelectTrack.FileName) & "\" & IO.Path.GetFileNameWithoutExtension(ofdSelectTrack.FileName) & ".json") 'Write .json file in the same directory
+            generateFile(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & track.bucket & "/" & IO.Path.GetFileName(ofdSelectTrack.FileName) & """" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(ofdSelectTrack.FileName) & "\" & IO.Path.GetFileNameWithoutExtension(ofdSelectTrack.FileName) & ".json") 'Write .json file in the same directory
+            MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC file is uploaded to the specified bucket before requesting transcription.")
         End If
     End Sub
 
