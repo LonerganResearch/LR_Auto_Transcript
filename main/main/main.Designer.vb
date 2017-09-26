@@ -28,7 +28,7 @@ Partial Class main
         '
         'btnImport
         '
-        Me.btnImport.Location = New System.Drawing.Point(151, 115)
+        Me.btnImport.Location = New System.Drawing.Point(105, 12)
         Me.btnImport.Name = "btnImport"
         Me.btnImport.Size = New System.Drawing.Size(75, 23)
         Me.btnImport.TabIndex = 0
@@ -43,10 +43,10 @@ Partial Class main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(694, 326)
+        Me.ClientSize = New System.Drawing.Size(282, 47)
         Me.Controls.Add(Me.btnImport)
         Me.Name = "main"
-        Me.Text = "Automatic Transcript v0.1"
+        Me.Text = "Automatic Transcript v0.2"
         Me.ResumeLayout(False)
 
     End Sub

@@ -1,0 +1,8 @@
+{
+  "config": {
+      "encoding":"FLAC",
+      "sampleRateHertz": 44100,
+      "languageCode": "en-UK",
+      "enableWordTimeOffsets": false
+  },
+  "audio": {
