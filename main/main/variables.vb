@@ -1,6 +1,4 @@
 ﻿Module variables
-    Public ffmpegPath As String = "L:\Tools\ffmpeg-20170921-183fd30-win64-static\bin\"
-
     Public Class track 'Some defaults can be modified here.
         Property name As String
         Property encoding As String = "FLAC" 'Typically FLAC

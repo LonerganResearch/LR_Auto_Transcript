@@ -23,34 +23,52 @@ Partial Class main
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         Me.btnImport = New System.Windows.Forms.Button()
-        Me.ofdSelectTrack = New System.Windows.Forms.OpenFileDialog()
+        Me.ofdSelect = New System.Windows.Forms.OpenFileDialog()
+        Me.btnSelectSAKey = New System.Windows.Forms.Button()
+        Me.fbdDir = New System.Windows.Forms.FolderBrowserDialog()
         Me.SuspendLayout()
         '
         'btnImport
         '
-        Me.btnImport.Location = New System.Drawing.Point(105, 12)
+        Me.btnImport.Location = New System.Drawing.Point(12, 12)
         Me.btnImport.Name = "btnImport"
-        Me.btnImport.Size = New System.Drawing.Size(75, 23)
+        Me.btnImport.Size = New System.Drawing.Size(162, 23)
         Me.btnImport.TabIndex = 0
-        Me.btnImport.Text = "Import"
+        Me.btnImport.Text = "Import Audio File"
         Me.btnImport.UseVisualStyleBackColor = True
         '
-        'ofdSelectTrack
+        'ofdSelect
         '
-        Me.ofdSelectTrack.Filter = "MP3 files (.mp3)|*.mp3"
+        Me.ofdSelect.Filter = "MP3 files (.mp3)|*.mp3"
+        '
+        'btnSelectSAKey
+        '
+        Me.btnSelectSAKey.Location = New System.Drawing.Point(12, 41)
+        Me.btnSelectSAKey.Name = "btnSelectSAKey"
+        Me.btnSelectSAKey.Size = New System.Drawing.Size(162, 23)
+        Me.btnSelectSAKey.TabIndex = 1
+        Me.btnSelectSAKey.Text = "Select Service Account Key"
+        Me.btnSelectSAKey.UseVisualStyleBackColor = True
+        '
+        'fbdDir
+        '
+        Me.fbdDir.ShowNewFolderButton = False
         '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(282, 47)
+        Me.ClientSize = New System.Drawing.Size(287, 147)
+        Me.Controls.Add(Me.btnSelectSAKey)
         Me.Controls.Add(Me.btnImport)
         Me.Name = "main"
-        Me.Text = "Automatic Transcript v0.2"
+        Me.Text = "Automatic Transcript v0.4"
         Me.ResumeLayout(False)
 
     End Sub
 
     Friend WithEvents btnImport As Button
-    Friend WithEvents ofdSelectTrack As OpenFileDialog
+    Friend WithEvents ofdSelect As OpenFileDialog
+    Friend WithEvents btnSelectSAKey As Button
+    Friend WithEvents fbdDir As FolderBrowserDialog
 End Class
