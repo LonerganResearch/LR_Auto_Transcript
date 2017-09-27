@@ -47,6 +47,9 @@
     <OptionInfer>On</OptionInfer>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="CIRS_lib">
+      <HintPath>..\..\..\CIRS_vb_library\CIRS_lib\CIRS_lib\bin\Debug\CIRS_lib.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />

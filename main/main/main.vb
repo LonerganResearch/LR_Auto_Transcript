@@ -1,4 +1,6 @@
-﻿Public Class main
+﻿Imports CIRS_lib
+
+Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'My.Settings.Reset()
         checkDirs("ffmpeg", "ffmpegPath", "http://ffmpeg.zeranoe.com/builds/")
@@ -30,7 +32,6 @@
                 If bucket = "" Then
                     bucket = "lr_test_transcript"
                 End If
-
                 Dim cmd As New Process
                 With cmd
                     .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackname & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""", "exit")) 'MP3 to FLAC conversion
@@ -38,7 +39,8 @@
                     .WaitForExit()
                 End With
 
-                generateFile(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".json") 'Write .json file in the same directory
+                Dim cirsfile As New CIRS_lib.file
+                cirsfile.writeToFile(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".json") 'Write .json file in the same directory
             Next
             MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
             ofdSelect.Dispose()
@@ -57,7 +59,7 @@
             objWriter.WriteLine(x)
             objWriter.Close()
         Catch ex As Exception
-            MsgBox("Please close the file first.", MsgBoxStyle.ApplicationModal, "Error")
+            MsgBox("Please close the file first.", MsgBoxStyle.Critical, "Error")
         End Try
     End Sub
 
