@@ -26,6 +26,7 @@ Partial Class main
         Me.ofdSelect = New System.Windows.Forms.OpenFileDialog()
         Me.btnSelectSAKey = New System.Windows.Forms.Button()
         Me.fbdDir = New System.Windows.Forms.FolderBrowserDialog()
+        Me.btnExit = New System.Windows.Forms.Button()
         Me.SuspendLayout()
         '
         'btnImport
@@ -54,11 +55,21 @@ Partial Class main
         '
         Me.fbdDir.ShowNewFolderButton = False
         '
+        'btnExit
+        '
+        Me.btnExit.Location = New System.Drawing.Point(12, 112)
+        Me.btnExit.Name = "btnExit"
+        Me.btnExit.Size = New System.Drawing.Size(89, 23)
+        Me.btnExit.TabIndex = 2
+        Me.btnExit.Text = "Exit"
+        Me.btnExit.UseVisualStyleBackColor = True
+        '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(287, 147)
+        Me.Controls.Add(Me.btnExit)
         Me.Controls.Add(Me.btnSelectSAKey)
         Me.Controls.Add(Me.btnImport)
         Me.Name = "main"
@@ -71,4 +82,5 @@ Partial Class main
     Friend WithEvents ofdSelect As OpenFileDialog
     Friend WithEvents btnSelectSAKey As Button
     Friend WithEvents fbdDir As FolderBrowserDialog
+    Friend WithEvents btnExit As Button
 End Class
