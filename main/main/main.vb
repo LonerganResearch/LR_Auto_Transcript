@@ -1,5 +1,12 @@
 ﻿Imports CIRS_lib
 
+'To do
+'Integrate command line recognise and get
+'Detect whether operation success
+'curl -X POST -d @"[.JSON_LOCATION]" https://speech.googleapis.com/v1/speech:longrunningrecognize?key=[API_KEY] --header "Content-Type:application/json" > [OUTPUT_FILE]
+'curl -X GET https://speech.googleapis.com/v1/operations/[RETURNED_NAME]?key=[API_KEY] > [OUTPUT_FILE]
+'Prompt for API key
+
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'My.Settings.Reset()
@@ -10,7 +17,7 @@ Public Class main
     Private Sub checkDirs(program As String, path As String, url As String) 'Check that dependencies exist
         If My.Settings.Item(path) = "" Then 'Check that the path is not empty
             MsgBox("The directory for " & program & " has not been specified. Please select the 'bin' folder of " & program & " installation/extraction", MsgBoxStyle.ApplicationModal + MsgBoxStyle.SystemModal, "Dependency Not Found")
-            While fbdDir.ShowDialog() <> DialogResult.OK And Not IO.File.Exists(fbdDir.SelectedPath & "\" & program & ".exe")
+            While fbdDir.ShowDialog() <> DialogResult.OK Or Not IO.File.Exists(fbdDir.SelectedPath & "\" & program & ".exe")
                 If MsgBox(program & ".exe not found. Respecify directory?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Error") = MsgBoxResult.No Then
                     MsgBox(program & " is required to run this application. Please install " & program & " and then relaunch.", MsgBoxStyle.Critical, "Critical Error")
                     Process.Start(url)

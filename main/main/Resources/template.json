@@ -2,7 +2,7 @@
   "config": {
       "encoding":"FLAC",
       "sampleRateHertz": 44100,
-      "languageCode": "en-UK",
+      "languageCode": "en-AU",
       "enableWordTimeOffsets": false
   },
   "audio": {
