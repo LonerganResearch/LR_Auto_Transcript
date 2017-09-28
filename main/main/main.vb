@@ -6,6 +6,9 @@
 'curl -X POST -d @"[.JSON_LOCATION]" https://speech.googleapis.com/v1/speech:longrunningrecognize?key=[API_KEY] --header "Content-Type:application/json" > [OUTPUT_FILE]
 'curl -X GET https://speech.googleapis.com/v1/operations/[RETURNED_NAME]?key=[API_KEY] > [OUTPUT_FILE]
 'Prompt for API key
+'Append a list of operations
+'Continual polling for 'true' (use str.contains to poll complete i.e. "progressPercent": 100
+'Audacity background noise removal
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -20,7 +23,7 @@ Public Class main
             While fbdDir.ShowDialog() <> DialogResult.OK Or Not IO.File.Exists(fbdDir.SelectedPath & "\" & program & ".exe")
                 If MsgBox(program & ".exe not found. Respecify directory?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Error") = MsgBoxResult.No Then
                     MsgBox(program & " is required to run this application. Please install " & program & " and then relaunch.", MsgBoxStyle.Critical, "Critical Error")
-                    Process.Start(url)
+                    Process.Start(url) 'Link to download page
                     End
                 End If
             End While
@@ -39,16 +42,10 @@ Public Class main
                 If bucket = "" Then
                     bucket = "lr_test_transcript"
                 End If
-                Dim cmd As New Process
-                With cmd
-                    .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackname & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""", "exit")) 'MP3 to FLAC conversion
-                    .Start()
-                    .WaitForExit()
-                End With
-
-                Dim cirsfile As New CIRS_lib.file
+                runCmd(My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackname & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""")
                 cirsfile.writeToFile(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".json") 'Write .json file in the same directory
             Next
+
             MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
             ofdSelect.Dispose()
         End If
@@ -73,16 +70,20 @@ Public Class main
     Private Sub btnSelectAuthKey_Click(sender As Object, e As EventArgs) Handles btnSelectSAKey.Click
         If ofdSelect.ShowDialog() = DialogResult.OK Then
             Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", ofdSelect.FileName)
-            Dim cmd As New Process
-            With cmd
-                .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", "gcloud auth application-default print-access-token > " & AppDomain.CurrentDomain.BaseDirectory & "authkey.txt", "exit")) 'MP3 to FLAC conversion
-                .Start()
-                .WaitForExit()
-            End With
+            runCmd("gcloud auth application-default print-access-token > " & AppDomain.CurrentDomain.BaseDirectory & "authkey.txt") 'MP3 to FLAC conversion
             My.Settings.authToken = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
             IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
             ofdSelect.Dispose()
         End If
+    End Sub
+
+    Private Sub runCmd(command As String)
+        Dim cmd As New Process
+        With cmd
+            .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit")) 'MP3 to FLAC conversion
+            .Start()
+            .WaitForExit()
+        End With
     End Sub
 
     Private Sub btnExit_Click(sender As Object, e As EventArgs) Handles btnExit.Click
