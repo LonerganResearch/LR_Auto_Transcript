@@ -5,10 +5,8 @@
 'Detect whether operation success
 'curl -X POST -d @"[.JSON_LOCATION]" https://speech.googleapis.com/v1/speech:longrunningrecognize?key=[API_KEY] --header "Content-Type:application/json" > [OUTPUT_FILE]
 'curl -X GET https://speech.googleapis.com/v1/operations/[RETURNED_NAME]?key=[API_KEY] > [OUTPUT_FILE]
-'Prompt for API key
 'Append a list of operations
 'Continual polling for 'true' (use str.contains to poll complete i.e. "progressPercent": 100
-'Audacity background noise removal
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -67,15 +65,16 @@ Public Class main
         End Try
     End Sub
 
-    Private Sub btnSelectAuthKey_Click(sender As Object, e As EventArgs) Handles btnSelectSAKey.Click
-        If ofdSelect.ShowDialog() = DialogResult.OK Then
-            Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", ofdSelect.FileName)
-            runCmd("gcloud auth application-default print-access-token > " & AppDomain.CurrentDomain.BaseDirectory & "authkey.txt") 'MP3 to FLAC conversion
-            My.Settings.authToken = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
-            IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
-            ofdSelect.Dispose()
-        End If
-    End Sub
+    'Authentication key is not used for long recognise
+    'Private Sub getAuthKey()
+    '    If ofdSelect.ShowDialog() = DialogResult.OK Then
+    '        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", ofdSelect.FileName)
+    '        runCmd("gcloud auth application-default print-access-token > " & AppDomain.CurrentDomain.BaseDirectory & "authkey.txt") 'MP3 to FLAC conversion
+    '        My.Settings.authToken = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
+    '        IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
+    '        ofdSelect.Dispose()
+    '    End If
+    'End Sub
 
     Private Sub runCmd(command As String)
         Dim cmd As New Process
@@ -88,6 +87,15 @@ Public Class main
 
     Private Sub btnExit_Click(sender As Object, e As EventArgs) Handles btnExit.Click
         End
+    End Sub
+
+    Private Sub btnTranscribe_Click(sender As Object, e As EventArgs) Handles btnTranscribe.Click
+        My.Settings.apiKey = InputBox("Please paste the API key from APIs & Services > Credentials here.", "Paste API Key")
+        If My.Settings.apiKey = "" Then
+            MsgBox("More things here")
+        Else
+            MsgBox("An API key is required to transcribe files", MsgBoxStyle.Critical, "Critical Error")
+        End If
     End Sub
 End Class
 

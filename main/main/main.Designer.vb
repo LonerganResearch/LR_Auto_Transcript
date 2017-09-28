@@ -24,7 +24,7 @@ Partial Class main
     Private Sub InitializeComponent()
         Me.btnImport = New System.Windows.Forms.Button()
         Me.ofdSelect = New System.Windows.Forms.OpenFileDialog()
-        Me.btnSelectSAKey = New System.Windows.Forms.Button()
+        Me.btnTranscribe = New System.Windows.Forms.Button()
         Me.fbdDir = New System.Windows.Forms.FolderBrowserDialog()
         Me.btnExit = New System.Windows.Forms.Button()
         Me.SuspendLayout()
@@ -35,21 +35,22 @@ Partial Class main
         Me.btnImport.Name = "btnImport"
         Me.btnImport.Size = New System.Drawing.Size(162, 23)
         Me.btnImport.TabIndex = 0
-        Me.btnImport.Text = "Import Audio File"
+        Me.btnImport.Text = "Import Audio File(s)"
         Me.btnImport.UseVisualStyleBackColor = True
         '
         'ofdSelect
         '
         Me.ofdSelect.Filter = "MP3 files (.mp3)|*.mp3"
+        Me.ofdSelect.Multiselect = True
         '
-        'btnSelectSAKey
+        'btnTranscribe
         '
-        Me.btnSelectSAKey.Location = New System.Drawing.Point(12, 41)
-        Me.btnSelectSAKey.Name = "btnSelectSAKey"
-        Me.btnSelectSAKey.Size = New System.Drawing.Size(162, 23)
-        Me.btnSelectSAKey.TabIndex = 1
-        Me.btnSelectSAKey.Text = "Select Service Account Key"
-        Me.btnSelectSAKey.UseVisualStyleBackColor = True
+        Me.btnTranscribe.Location = New System.Drawing.Point(12, 41)
+        Me.btnTranscribe.Name = "btnTranscribe"
+        Me.btnTranscribe.Size = New System.Drawing.Size(162, 23)
+        Me.btnTranscribe.TabIndex = 1
+        Me.btnTranscribe.Text = "Transcribe Audio File(s)"
+        Me.btnTranscribe.UseVisualStyleBackColor = True
         '
         'fbdDir
         '
@@ -70,7 +71,7 @@ Partial Class main
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(287, 147)
         Me.Controls.Add(Me.btnExit)
-        Me.Controls.Add(Me.btnSelectSAKey)
+        Me.Controls.Add(Me.btnTranscribe)
         Me.Controls.Add(Me.btnImport)
         Me.Name = "main"
         Me.Text = "Automatic Transcript v0.4"
@@ -80,7 +81,7 @@ Partial Class main
 
     Friend WithEvents btnImport As Button
     Friend WithEvents ofdSelect As OpenFileDialog
-    Friend WithEvents btnSelectSAKey As Button
+    Friend WithEvents btnTranscribe As Button
     Friend WithEvents fbdDir As FolderBrowserDialog
     Friend WithEvents btnExit As Button
 End Class
