@@ -27,6 +27,7 @@ Partial Class main
         Me.btnTranscribe = New System.Windows.Forms.Button()
         Me.fbdDir = New System.Windows.Forms.FolderBrowserDialog()
         Me.btnExit = New System.Windows.Forms.Button()
+        Me.btnPoll = New System.Windows.Forms.Button()
         Me.SuspendLayout()
         '
         'btnImport
@@ -40,7 +41,6 @@ Partial Class main
         '
         'ofdSelect
         '
-        Me.ofdSelect.Filter = "MP3 files (.mp3)|*.mp3"
         Me.ofdSelect.Multiselect = True
         '
         'btnTranscribe
@@ -65,16 +65,26 @@ Partial Class main
         Me.btnExit.Text = "Exit"
         Me.btnExit.UseVisualStyleBackColor = True
         '
+        'btnPoll
+        '
+        Me.btnPoll.Location = New System.Drawing.Point(12, 70)
+        Me.btnPoll.Name = "btnPoll"
+        Me.btnPoll.Size = New System.Drawing.Size(162, 23)
+        Me.btnPoll.TabIndex = 3
+        Me.btnPoll.Text = "Poll Operations"
+        Me.btnPoll.UseVisualStyleBackColor = True
+        '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(287, 147)
+        Me.Controls.Add(Me.btnPoll)
         Me.Controls.Add(Me.btnExit)
         Me.Controls.Add(Me.btnTranscribe)
         Me.Controls.Add(Me.btnImport)
         Me.Name = "main"
-        Me.Text = "Automatic Transcript v0.4"
+        Me.Text = "Automatic Transcript v0.5"
         Me.ResumeLayout(False)
 
     End Sub
@@ -84,4 +94,5 @@ Partial Class main
     Friend WithEvents btnTranscribe As Button
     Friend WithEvents fbdDir As FolderBrowserDialog
     Friend WithEvents btnExit As Button
+    Friend WithEvents btnPoll As Button
 End Class

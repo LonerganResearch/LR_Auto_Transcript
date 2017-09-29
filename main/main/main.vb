@@ -3,7 +3,6 @@
 'To do
 'Integrate command line recognise and get
 'Detect whether operation success
-'curl -X POST -d @"[.JSON_LOCATION]" https://speech.googleapis.com/v1/speech:longrunningrecognize?key=[API_KEY] --header "Content-Type:application/json" > [OUTPUT_FILE]
 'curl -X GET https://speech.googleapis.com/v1/operations/[RETURNED_NAME]?key=[API_KEY] > [OUTPUT_FILE]
 'Append a list of operations
 'Continual polling for 'true' (use str.contains to poll complete i.e. "progressPercent": 100
@@ -11,8 +10,19 @@
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'My.Settings.Reset()
+        If My.Settings.operationsList Is Nothing Then 'Initialises string collection
+            My.Settings.operationsList = New System.Collections.Specialized.StringCollection
+        End If
         checkDirs("ffmpeg", "ffmpegPath", "http://ffmpeg.zeranoe.com/builds/")
         checkDirs("curl", "curlPath", "https://curl.haxx.se/dlwiz/?type=bin&os=Win64&flav=-&ver=*&cpu=x86_64")
+        If My.Settings.apiKey = "" Then
+            My.Settings.apiKey = InputBox("Please paste the API key from APIs & Services > Credentials here.", "Paste API Key")
+            If My.Settings.apiKey = "" Then
+                MsgBox("An API key is required to transcribe files", MsgBoxStyle.Critical, "Critical Error")
+                End
+            End If
+            My.Settings.Save()
+        End If
     End Sub
 
     Private Sub checkDirs(program As String, path As String, url As String) 'Check that dependencies exist
@@ -32,7 +42,10 @@ Public Class main
     End Sub
 
     Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click
-        ofdSelect.Multiselect = True
+        With ofdSelect
+            .Multiselect = True
+            .Filter = "MP3 files (.mp3)|*.mp3"
+        End With
         If ofdSelect.ShowDialog() = DialogResult.OK Then
             Dim bucket As String = InputBox("Please enter the name of the bucket you wish to upload the file for transcription to. This will default to lr_test_transcript", "Select a bucket directory")
 
@@ -40,7 +53,7 @@ Public Class main
                 If bucket = "" Then
                     bucket = "lr_test_transcript"
                 End If
-                runCmd(My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackname & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""")
+                runCmd(My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackname & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""") 'MP3 to FLAC conversion
                 cirsfile.writeToFile(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".json") 'Write .json file in the same directory
             Next
 
@@ -79,7 +92,7 @@ Public Class main
     Private Sub runCmd(command As String)
         Dim cmd As New Process
         With cmd
-            .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit")) 'MP3 to FLAC conversion
+            .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit"))
             .Start()
             .WaitForExit()
         End With
@@ -90,12 +103,54 @@ Public Class main
     End Sub
 
     Private Sub btnTranscribe_Click(sender As Object, e As EventArgs) Handles btnTranscribe.Click
-        My.Settings.apiKey = InputBox("Please paste the API key from APIs & Services > Credentials here.", "Paste API Key")
-        If My.Settings.apiKey = "" Then
-            MsgBox("More things here")
+        ofdSelect.Filter = "JSON files (.json)|*.json"
+        If ofdSelect.ShowDialog() = DialogResult.OK Then
+            runCmd("curl -X POST -d @""" & ofdSelect.FileName & """ https: //speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+
+            Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve the name of the operation
+            Dim x As Integer = (output.IndexOf("""name"": """) + Len("""name"": """))
+            Dim name = ""
+            While output(x) <> """"
+                name += output(x)
+                x += 1
+            End While
+            My.Settings.operationsList.Add(name)
+            My.Settings.Save()
+            IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+            ofdSelect.Dispose()
+        End If
+        'select a location to save name
+        'start polling
+        MsgBox("More things here")
+    End Sub
+
+    Private Sub poll(manifest As List(Of operation))
+        If manifest.Count = 0 Then
+            MsgBox("There are no current operations on file", MsgBoxStyle.Information, "Error")
         Else
-            MsgBox("An API key is required to transcribe files", MsgBoxStyle.Critical, "Critical Error")
+            For Each op As operation In manifest
+                runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & op.name & "?key=" & My.Settings.apiKey & " > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
+                If output.Contains("""progressPercent"": 100,""") Then
+                    op.done = True
+                End If
+            Next
         End If
     End Sub
-End Class
 
+    Private Sub btnPoll_Click(sender As Object, e As EventArgs) Handles btnPoll.Click
+        'Test collection
+        'For i = 1 To 5 
+        '    My.Settings.operationsList.Add(i)
+        'Next
+        'Dim test As New List(Of String)
+        'For Each str As String In My.Settings.operationsList
+        '    test.Add(str)
+        'Next
+        'Dim out As String = ""
+        'For Each str As String In test
+        '    out += str
+        'Next
+        'MsgBox(out)
+    End Sub
+End Class
