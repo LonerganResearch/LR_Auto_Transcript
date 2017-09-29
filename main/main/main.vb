@@ -1,18 +1,20 @@
 ﻿Imports CIRS_lib
 
 'To do
-'Integrate command line recognise and get
-'Detect whether operation success
-'curl -X GET https://speech.googleapis.com/v1/operations/[RETURNED_NAME]?key=[API_KEY] > [OUTPUT_FILE]
 'Append a list of operations
-'Continual polling for 'true' (use str.contains to poll complete i.e. "progressPercent": 100
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         'My.Settings.Reset()
+        Dim opList As New List(Of operation)
         If My.Settings.operationsList Is Nothing Then 'Initialises string collection
             My.Settings.operationsList = New System.Collections.Specialized.StringCollection
         End If
+        For Each op As String In My.Settings.operationsList 'Populate to 
+            Dim operation As New operation
+            operation.name = op
+            opList.Add(operation)
+        Next
         checkDirs("ffmpeg", "ffmpegPath", "http://ffmpeg.zeranoe.com/builds/")
         checkDirs("curl", "curlPath", "https://curl.haxx.se/dlwiz/?type=bin&os=Win64&flav=-&ver=*&cpu=x86_64")
         If My.Settings.apiKey = "" Then
