@@ -2,23 +2,27 @@
 
 'To do
 'Append a list of operations
+'Check if gcloud sdk is installed
+'Datagrid for polling
+'poll on start
+'403 - check that flac file is there and accessible
+'test invalid api error
+'logging
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        'My.Settings.Reset()
-        Dim opList As New List(Of operation)
+        initialise()
+    End Sub
+
+    Private Sub initialise()
         If My.Settings.operationsList Is Nothing Then 'Initialises string collection
             My.Settings.operationsList = New System.Collections.Specialized.StringCollection
         End If
-        For Each op As String In My.Settings.operationsList 'Populate to 
-            Dim operation As New operation
-            operation.name = op
-            opList.Add(operation)
-        Next
+
         checkDirs("ffmpeg", "ffmpegPath", "http://ffmpeg.zeranoe.com/builds/")
         checkDirs("curl", "curlPath", "https://curl.haxx.se/dlwiz/?type=bin&os=Win64&flav=-&ver=*&cpu=x86_64")
         If My.Settings.apiKey = "" Then
-            My.Settings.apiKey = InputBox("Please paste the API key from APIs & Services > Credentials here.", "Paste API Key")
+            My.Settings.apiKey = InputBox("Please paste the API key from APIs > Credentials here.", "Paste API Key")
             If My.Settings.apiKey = "" Then
                 MsgBox("An API key is required to transcribe files", MsgBoxStyle.Critical, "Critical Error")
                 End
@@ -59,25 +63,10 @@ Public Class main
                 cirsfile.writeToFile(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".json") 'Write .json file in the same directory
             Next
 
-            MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
+            MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket and made public before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
             ofdSelect.Dispose()
         End If
         ofdSelect.Multiselect = False
-    End Sub
-
-    Private Sub generateFile(ByVal x As String, path As String)
-        If IO.File.Exists(path) = False Then
-            IO.File.Create(path).Dispose()
-        Else
-            IO.File.Delete(path) 'Overwrite
-        End If
-        Try
-            Dim objWriter As New IO.StreamWriter(path, True)
-            objWriter.WriteLine(x)
-            objWriter.Close()
-        Catch ex As Exception
-            MsgBox("Please close the file first.", MsgBoxStyle.Critical, "Error")
-        End Try
     End Sub
 
     'Authentication key is not used for long recognise
@@ -107,35 +96,35 @@ Public Class main
     Private Sub btnTranscribe_Click(sender As Object, e As EventArgs) Handles btnTranscribe.Click
         ofdSelect.Filter = "JSON files (.json)|*.json"
         If ofdSelect.ShowDialog() = DialogResult.OK Then
-            runCmd("curl -X POST -d @""" & ofdSelect.FileName & """ https: //speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+            For Each trackname As String In ofdSelect.FileNames
+                runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & ofdSelect.FileName & """ https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
 
-            Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve the name of the operation
-            Dim x As Integer = (output.IndexOf("""name"": """) + Len("""name"": """))
-            Dim name = ""
-            While output(x) <> """"
-                name += output(x)
-                x += 1
-            End While
-            My.Settings.operationsList.Add(name)
-            My.Settings.Save()
-            IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                My.Settings.operationsList.Add(cirsfile.parse(output, """name"": """, """")) 'Retrieve the name of the operation
+                'cirsfile.writeToFile(cirsfile.parse(output, """name"": """, """"), "C:\Users\rei.kaneko.LONERGAN\Downloads\return6min.txt") 'Remove me
+                My.Settings.Save()
+                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Uncomment when releasing
+            Next
             ofdSelect.Dispose()
+            'poll()
         End If
-        'select a location to save name
-        'start polling
-        MsgBox("More things here")
     End Sub
 
-    Private Sub poll(manifest As List(Of operation))
-        If manifest.Count = 0 Then
+    Private Sub poll()
+        Dim opList As New List(Of operation)
+        For Each op As String In My.Settings.operationsList 'Populate to list
+            Dim operation As New operation
+            operation.name = op
+            opList.Add(operation)
+        Next
+        If opList.Count = 0 Then
             MsgBox("There are no current operations on file", MsgBoxStyle.Information, "Error")
         Else
-            For Each op As operation In manifest
+            For Each op As operation In opList
                 runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & op.name & "?key=" & My.Settings.apiKey & " > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
-                If output.Contains("""progressPercent"": 100,""") Then
-                    op.done = True
-                End If
+                op.progress = cirsfile.parse(output, """progressPercent"": ", ",") 'Get percentage
+                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
             Next
         End If
     End Sub
@@ -154,5 +143,17 @@ Public Class main
         '    out += str
         'Next
         'MsgBox(out)
+        'poll()
+    End Sub
+
+    Private Sub btnTest_Click(sender As Object, e As EventArgs) Handles btnTest.Click
+        MsgBox("Nothing!")
+    End Sub
+
+    Private Sub btnReset_Click(sender As Object, e As EventArgs) Handles btnReset.Click
+        If MsgBox("Are you sure you want to clear all program settings and respecify dependencies?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Clear Application Settings?") Then
+            My.Settings.Reset()
+            initialise()
+        End If
     End Sub
 End Class

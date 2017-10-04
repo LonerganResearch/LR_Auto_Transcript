@@ -28,6 +28,8 @@ Partial Class main
         Me.fbdDir = New System.Windows.Forms.FolderBrowserDialog()
         Me.btnExit = New System.Windows.Forms.Button()
         Me.btnPoll = New System.Windows.Forms.Button()
+        Me.btnTest = New System.Windows.Forms.Button()
+        Me.btnReset = New System.Windows.Forms.Button()
         Me.SuspendLayout()
         '
         'btnImport
@@ -58,7 +60,7 @@ Partial Class main
         '
         'btnExit
         '
-        Me.btnExit.Location = New System.Drawing.Point(12, 112)
+        Me.btnExit.Location = New System.Drawing.Point(12, 174)
         Me.btnExit.Name = "btnExit"
         Me.btnExit.Size = New System.Drawing.Size(89, 23)
         Me.btnExit.TabIndex = 2
@@ -74,17 +76,37 @@ Partial Class main
         Me.btnPoll.Text = "Poll Operations"
         Me.btnPoll.UseVisualStyleBackColor = True
         '
+        'btnTest
+        '
+        Me.btnTest.Location = New System.Drawing.Point(107, 174)
+        Me.btnTest.Name = "btnTest"
+        Me.btnTest.Size = New System.Drawing.Size(162, 23)
+        Me.btnTest.TabIndex = 4
+        Me.btnTest.Text = "Test Button"
+        Me.btnTest.UseVisualStyleBackColor = True
+        '
+        'btnReset
+        '
+        Me.btnReset.Location = New System.Drawing.Point(12, 145)
+        Me.btnReset.Name = "btnReset"
+        Me.btnReset.Size = New System.Drawing.Size(162, 23)
+        Me.btnReset.TabIndex = 5
+        Me.btnReset.Text = "Reset Settings"
+        Me.btnReset.UseVisualStyleBackColor = True
+        '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(271, 147)
+        Me.ClientSize = New System.Drawing.Size(345, 209)
+        Me.Controls.Add(Me.btnReset)
+        Me.Controls.Add(Me.btnTest)
         Me.Controls.Add(Me.btnPoll)
         Me.Controls.Add(Me.btnExit)
         Me.Controls.Add(Me.btnTranscribe)
         Me.Controls.Add(Me.btnImport)
         Me.Name = "main"
-        Me.Text = "Automatic Transcript v0.5"
+        Me.Text = "Automatic Transcript v0.7"
         Me.ResumeLayout(False)
 
     End Sub
@@ -95,4 +117,6 @@ Partial Class main
     Friend WithEvents fbdDir As FolderBrowserDialog
     Friend WithEvents btnExit As Button
     Friend WithEvents btnPoll As Button
+    Friend WithEvents btnTest As Button
+    Friend WithEvents btnReset As Button
 End Class
