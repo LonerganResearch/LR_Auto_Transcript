@@ -64,8 +64,9 @@ Public Class main
     End Sub
 
     Private Sub btnPoll_Click(sender As Object, e As EventArgs) Handles btnPoll.Click
+        My.Settings.operationsList.Clear()
         'Test collection
-        'For i = 1 To 5 
+        'For i = 1 To 5
         '    My.Settings.operationsList.Add(i)
         'Next
         'Dim test As New List(Of String)
@@ -94,6 +95,7 @@ Public Class main
 
         checkDirs("ffmpeg", "ffmpegPath", "http://ffmpeg.zeranoe.com/builds/")
         checkDirs("curl", "curlPath", "https://curl.haxx.se/dlwiz/?type=bin&os=Win64&flav=-&ver=*&cpu=x86_64")
+
         If My.Settings.apiKey = "" Then
             My.Settings.apiKey = InputBox("Please paste the API key from APIs > Credentials here.", "Paste API Key")
             If My.Settings.apiKey = "" Then
