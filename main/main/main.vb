@@ -4,10 +4,8 @@
 'Check if gcloud sdk is installed
 'Datagrid for polling
 'poll on start
-'=====
-'logging
-'403 - check that flac file is there and accessible
-'400 - invalid api key
+'transcript db?
+'file not uploaded error code
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -15,10 +13,7 @@ Public Class main
     End Sub
 
     Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click
-        With ofdSelect
-            .Multiselect = True
-            .Filter = "MP3 files (.mp3)|*.mp3"
-        End With
+        ofdSelect.Filter = "MP3 files (.mp3)|*.mp3"
         If ofdSelect.ShowDialog() = DialogResult.OK Then
             Dim bucket As String = InputBox("Please enter the name of the bucket you wish to upload the file for transcription to. This will default to lr_test_transcript", "Select a bucket directory")
 
@@ -33,7 +28,6 @@ Public Class main
             MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket and made public before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
             ofdSelect.Dispose()
         End If
-        ofdSelect.Multiselect = False
     End Sub
 
     Private Sub btnExit_Click(sender As Object, e As EventArgs) Handles btnExit.Click
@@ -47,11 +41,21 @@ Public Class main
                 runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & ofdSelect.FileName & """ https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
 
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
-                My.Settings.operationsList.Add(cirsfile.parse(output, """name"": """, """")) 'Retrieve the name of the operation
-                'cirsfile.writeToFile(cirsfile.parse(output, """name"": """, """"), "C:\Users\rei.kaneko.LONERGAN\Downloads\return6min.txt") 'Remove me
+                Select Case True
+                    Case output.Contains("code"": 400")
+                        MsgBox("Error code 400: API key not valid. Please pass a valid API key.", MsgBoxStyle.SystemModal, "Error 400")
+                    Case output.Contains("code"": 403")
+                        MsgBox("Error code 403: Source file not made public. Check 'Share publicly' in bucket next to file", MsgBoxStyle.SystemModal, "Error 403")
+                    Case output.Contains("""name"": """)
+                        My.Settings.operationsList.Add(cirsfile.parse(output, """name"": """, """")) 'Retrieve the name of the operation
+                    Case Else
+                        MsgBox("Unspecified error: " & output)
+                End Select
+
                 My.Settings.Save()
                 IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Uncomment when releasing
             Next
+
             ofdSelect.Dispose()
             'poll()
         End If
