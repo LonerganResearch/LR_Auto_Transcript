@@ -30,6 +30,7 @@ Partial Class main
         Me.btnPoll = New System.Windows.Forms.Button()
         Me.btnTest = New System.Windows.Forms.Button()
         Me.btnReset = New System.Windows.Forms.Button()
+        Me.sfdExport = New System.Windows.Forms.SaveFileDialog()
         Me.SuspendLayout()
         '
         'btnImport
@@ -94,6 +95,12 @@ Partial Class main
         Me.btnReset.Text = "Reset Settings"
         Me.btnReset.UseVisualStyleBackColor = True
         '
+        'sfdExport
+        '
+        Me.sfdExport.DefaultExt = "txt"
+        Me.sfdExport.FileName = "Output"
+        Me.sfdExport.Filter = "Text file|*.txt"
+        '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
@@ -106,7 +113,7 @@ Partial Class main
         Me.Controls.Add(Me.btnTranscribe)
         Me.Controls.Add(Me.btnImport)
         Me.Name = "main"
-        Me.Text = "Automatic Transcript v0.7"
+        Me.Text = "Automatic Transcript v0.8"
         Me.ResumeLayout(False)
 
     End Sub
@@ -119,4 +126,5 @@ Partial Class main
     Friend WithEvents btnPoll As Button
     Friend WithEvents btnTest As Button
     Friend WithEvents btnReset As Button
+    Friend WithEvents sfdExport As SaveFileDialog
 End Class

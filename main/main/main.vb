@@ -1,17 +1,84 @@
 ﻿Imports CIRS_lib
 
 'To do
-'Append a list of operations
 'Check if gcloud sdk is installed
 'Datagrid for polling
 'poll on start
-'403 - check that flac file is there and accessible
-'test invalid api error
+'=====
 'logging
+'403 - check that flac file is there and accessible
+'400 - invalid api key
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         initialise()
+    End Sub
+
+    Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click
+        With ofdSelect
+            .Multiselect = True
+            .Filter = "MP3 files (.mp3)|*.mp3"
+        End With
+        If ofdSelect.ShowDialog() = DialogResult.OK Then
+            Dim bucket As String = InputBox("Please enter the name of the bucket you wish to upload the file for transcription to. This will default to lr_test_transcript", "Select a bucket directory")
+
+            For Each trackname As String In ofdSelect.FileNames
+                If bucket = "" Then
+                    bucket = "lr_test_transcript"
+                End If
+                runCmd(My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackname & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""") 'MP3 to FLAC conversion
+                cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".json", False) 'Write .json file in the same directory
+            Next
+
+            MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket and made public before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
+            ofdSelect.Dispose()
+        End If
+        ofdSelect.Multiselect = False
+    End Sub
+
+    Private Sub btnExit_Click(sender As Object, e As EventArgs) Handles btnExit.Click
+        End
+    End Sub
+
+    Private Sub btnTranscribe_Click(sender As Object, e As EventArgs) Handles btnTranscribe.Click
+        ofdSelect.Filter = "JSON files (.json)|*.json"
+        If ofdSelect.ShowDialog() = DialogResult.OK Then
+            For Each trackname As String In ofdSelect.FileNames
+                runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & ofdSelect.FileName & """ https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+
+                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                My.Settings.operationsList.Add(cirsfile.parse(output, """name"": """, """")) 'Retrieve the name of the operation
+                'cirsfile.writeToFile(cirsfile.parse(output, """name"": """, """"), "C:\Users\rei.kaneko.LONERGAN\Downloads\return6min.txt") 'Remove me
+                My.Settings.Save()
+                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Uncomment when releasing
+            Next
+            ofdSelect.Dispose()
+            'poll()
+        End If
+    End Sub
+
+    Private Sub btnPoll_Click(sender As Object, e As EventArgs) Handles btnPoll.Click
+        'Test collection
+        'For i = 1 To 5 
+        '    My.Settings.operationsList.Add(i)
+        'Next
+        'Dim test As New List(Of String)
+        'For Each str As String In My.Settings.operationsList
+        '    test.Add(str)
+        'Next
+        'Dim out As String = ""
+        'For Each str As String In test
+        '    out += str
+        'Next
+        'MsgBox(out)
+        'poll()
+    End Sub
+
+    Private Sub btnReset_Click(sender As Object, e As EventArgs) Handles btnReset.Click
+        If MsgBox("Are you sure you want to clear all program settings and respecify dependencies?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Clear Application Settings?") Then
+            My.Settings.Reset()
+            initialise()
+        End If
     End Sub
 
     Private Sub initialise()
@@ -47,28 +114,6 @@ Public Class main
         End If
     End Sub
 
-    Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click
-        With ofdSelect
-            .Multiselect = True
-            .Filter = "MP3 files (.mp3)|*.mp3"
-        End With
-        If ofdSelect.ShowDialog() = DialogResult.OK Then
-            Dim bucket As String = InputBox("Please enter the name of the bucket you wish to upload the file for transcription to. This will default to lr_test_transcript", "Select a bucket directory")
-
-            For Each trackname As String In ofdSelect.FileNames
-                If bucket = "" Then
-                    bucket = "lr_test_transcript"
-                End If
-                runCmd(My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackname & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""") 'MP3 to FLAC conversion
-                cirsfile.writeToFile(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackname) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackname) & "\" & IO.Path.GetFileNameWithoutExtension(trackname) & ".json") 'Write .json file in the same directory
-            Next
-
-            MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket and made public before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
-            ofdSelect.Dispose()
-        End If
-        ofdSelect.Multiselect = False
-    End Sub
-
     'Authentication key is not used for long recognise
     'Private Sub getAuthKey()
     '    If ofdSelect.ShowDialog() = DialogResult.OK Then
@@ -87,27 +132,6 @@ Public Class main
             .Start()
             .WaitForExit()
         End With
-    End Sub
-
-    Private Sub btnExit_Click(sender As Object, e As EventArgs) Handles btnExit.Click
-        End
-    End Sub
-
-    Private Sub btnTranscribe_Click(sender As Object, e As EventArgs) Handles btnTranscribe.Click
-        ofdSelect.Filter = "JSON files (.json)|*.json"
-        If ofdSelect.ShowDialog() = DialogResult.OK Then
-            For Each trackname As String In ofdSelect.FileNames
-                runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & ofdSelect.FileName & """ https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
-
-                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
-                My.Settings.operationsList.Add(cirsfile.parse(output, """name"": """, """")) 'Retrieve the name of the operation
-                'cirsfile.writeToFile(cirsfile.parse(output, """name"": """, """"), "C:\Users\rei.kaneko.LONERGAN\Downloads\return6min.txt") 'Remove me
-                My.Settings.Save()
-                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Uncomment when releasing
-            Next
-            ofdSelect.Dispose()
-            'poll()
-        End If
     End Sub
 
     Private Sub poll()
@@ -129,31 +153,22 @@ Public Class main
         End If
     End Sub
 
-    Private Sub btnPoll_Click(sender As Object, e As EventArgs) Handles btnPoll.Click
-        'Test collection
-        'For i = 1 To 5 
-        '    My.Settings.operationsList.Add(i)
-        'Next
-        'Dim test As New List(Of String)
-        'For Each str As String In My.Settings.operationsList
-        '    test.Add(str)
-        'Next
-        'Dim out As String = ""
-        'For Each str As String In test
-        '    out += str
-        'Next
-        'MsgBox(out)
-        'poll()
+    Private Sub cleanScript(input As String)
+        MsgBox("Please select a directory to save the transcript file.")
+        If sfdExport.ShowDialog() = DialogResult.OK Then
+            Dim output As String = ""
+            While input.Contains("transcript"": """) = True
+                input = input.Remove(0, (input.IndexOf("transcript"": """) - 1)) 'Remove all preceding text before the first transcript chunk
+                output += ("Time: " & cirsfile.parse(input, "startTime"": """, "s") & vbNewLine) 'Take timestamp
+                output += (cirsfile.parse(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
+                input = input.Remove(0, (input.IndexOf("startTime"": """) - 1)) 'Remove all preceding text before the first timestamp
+            End While
+            cirsfile.write(output, sfdExport.FileName, True)
+        End If
+        sfdExport.Dispose()
     End Sub
 
     Private Sub btnTest_Click(sender As Object, e As EventArgs) Handles btnTest.Click
         MsgBox("Nothing!")
-    End Sub
-
-    Private Sub btnReset_Click(sender As Object, e As EventArgs) Handles btnReset.Click
-        If MsgBox("Are you sure you want to clear all program settings and respecify dependencies?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Clear Application Settings?") Then
-            My.Settings.Reset()
-            initialise()
-        End If
     End Sub
 End Class
