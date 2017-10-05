@@ -3,6 +3,6 @@
       "encoding":"FLAC",
       "sampleRateHertz": 44100,
       "languageCode": "en-AU",
-      "enableWordTimeOffsets": false
+      "enableWordTimeOffsets": true
   },
   "audio": {

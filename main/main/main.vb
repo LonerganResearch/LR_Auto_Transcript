@@ -5,7 +5,9 @@
 'Datagrid for polling
 'poll on start
 'transcript db?
+'settings form?
 'file not uploaded error code
+'input box on top
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
