@@ -51,7 +51,7 @@ Public Class main
                     Case output.Contains("""name"": """)
                         My.Settings.operationsList.Add(cirsfile.parse(output, """name"": """, """")) 'Retrieve the name of the operation
                     Case Else
-                        MsgBox("Unspecified error: " & output)
+                        MsgBox("Unspecified error: " & output, MsgBoxStyle.SystemModal, "Unspecified Error")
                 End Select
 
                 My.Settings.Save()
@@ -151,9 +151,18 @@ Public Class main
             MsgBox("There are no current operations on file", MsgBoxStyle.Information, "Error")
         Else
             For Each op As operation In opList
-                runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & op.name & "?key=" & My.Settings.apiKey & " > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & op.name & "?key=" & My.Settings.apiKey & " > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
-                op.progress = cirsfile.parse(output, """progressPercent"": ", ",") 'Get percentage
+                Select Case True
+                    Case output.Contains("code"": 400")
+                        MsgBox("Error code 400: API key not valid. Please pass a valid API key.", MsgBoxStyle.SystemModal, "Error 400")
+                    Case output.Contains("""progressPercent"": ")
+                        op.progress = cirsfile.parse(output, """progressPercent"": ", ",") 'Get percentage
+                    Case Else
+                        MsgBox("Unspecified error: " & output, MsgBoxStyle.SystemModal, "Unspecified Error")
+                End Select
+
                 IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
             Next
         End If
@@ -175,6 +184,21 @@ Public Class main
     End Sub
 
     Private Sub btnTest_Click(sender As Object, e As EventArgs) Handles btnTest.Click
-        MsgBox("Nothing!")
+        'MsgBox("Nothing!")
+        If ofdSelect.ShowDialog() = DialogResult.OK Then
+            Dim input As String = My.Computer.FileSystem.ReadAllText(ofdSelect.FileName)
+            MsgBox("Please select a directory to save the transcript file.")
+            If sfdExport.ShowDialog() = DialogResult.OK Then
+                Dim output As String = ""
+                While input.Contains("transcript"": """) = True
+                    input = input.Remove(0, (input.IndexOf("transcript"": """) - 1)) 'Remove all preceding text before the first transcript chunk
+                    output += ("Time: " & cirsfile.parse(input, "startTime"": """, "s") & vbNewLine) 'Take timestamp
+                    output += (cirsfile.parse(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
+                    input = input.Remove(0, (input.IndexOf("startTime"": """) - 1)) 'Remove all preceding text before the first timestamp
+                End While
+                cirsfile.write(output, sfdExport.FileName, True)
+            End If
+            sfdExport.Dispose()
+        End If
     End Sub
 End Class
