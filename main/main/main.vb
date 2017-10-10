@@ -7,6 +7,7 @@
 'file not uploaded error code
 'input box on top
 'base64 encoding
+'allow viewing and deletion of files in batch
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -20,27 +21,15 @@ Public Class main
             Dim bucket As String = InputBox("Please enter the name of the bucket you wish to upload the file for transcription to. This will default to lr_test_transcript", "Select a bucket directory")
 
             For Each trackName As String In ofdSelect.FileNames
+                'Import and force conversion
                 If bucket = "" Then
                     bucket = "lr_test_transcript"
                 End If
                 runCmd(My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackName & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""") 'MP3 to FLAC conversion
                 cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json", False) 'Write .json file in the same directory
-            Next
 
-            MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket and made public before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
-            ofdSelect.Dispose()
-        End If
-    End Sub
-
-    Private Sub btnExit_Click(sender As Object, e As EventArgs) Handles btnExit.Click
-        End
-    End Sub
-
-    Private Sub btnTranscribe_Click(sender As Object, e As EventArgs) Handles btnTranscribe.Click
-        ofdSelect.Filter = "JSON files (.json)|*.json"
-        If ofdSelect.ShowDialog() = DialogResult.OK Then
-            For Each trackName As String In ofdSelect.FileNames
-                runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & trackName & """https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
+                'Post for transcription
+                runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
 
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
                 If checkErrors(output, """name"": """) = False Then
@@ -54,9 +43,14 @@ Public Class main
                 My.Settings.Save()
                 IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
             Next
+            poll()
+            'MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket and made public before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
             ofdSelect.Dispose()
-            'poll()
         End If
+    End Sub
+
+    Private Sub btnExit_Click(sender As Object, e As EventArgs) Handles btnExit.Click
+        End
     End Sub
 
     Private Sub btnPoll_Click(sender As Object, e As EventArgs) Handles btnPoll.Click
@@ -138,11 +132,13 @@ Public Class main
 
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
                 If checkErrors(output, """progressPercent"": ") = False Then
+
                     With dgJobs.Rows(rowCounter)
                         .Cells(0).Value = cirsfile.parseInString(op, "", "|")
                         .Cells(1).Value = cirsfile.parseInString(op, "|")
-                        .Cells(2).Value = cirsfile.parseInString(output, """progressPercent"": ", ",") 'Get percentage
+                        .Cells(2).Value = cirsfile.parseInString(output, """progressPercent"": ", ",") & "%" 'Get percentage
                     End With
+                    dgJobs.Rows.Add()
                     rowCounter += 1
                 End If
 
@@ -189,22 +185,21 @@ Public Class main
     End Function
 
     Private Sub btnTest_Click(sender As Object, e As EventArgs) Handles btnTest.Click
-        'My.Settings.operationsList.Add("8635689709546489895|HSJKDFKJSNHFJKWHAF")
-        'MsgBox("Nothing!")
-        If ofdSelect.ShowDialog() = DialogResult.OK Then
-            Dim input As String = My.Computer.FileSystem.ReadAllText(ofdSelect.FileName)
-            MsgBox("Please select a directory to save the transcript file.")
-            If sfdExport.ShowDialog() = DialogResult.OK Then
-                Dim output As String = ""
-                While input.Contains("transcript"": """) = True
-                    input = input.Remove(0, (input.IndexOf("transcript"": """) - 1)) 'Remove all preceding text before the first transcript chunk
-                    output += ("Time: " & cirsfile.parseInString(input, "startTime"": """, "s") & vbNewLine) 'Take timestamp
-                    output += (cirsfile.parseInString(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
-                    input = input.Remove(0, (input.IndexOf("startTime"": """) - 1)) 'Remove all preceding text before the first timestamp
-                End While
-                cirsfile.write(output, sfdExport.FileName, True)
-            End If
-            sfdExport.Dispose()
-        End If
+        MsgBox("Nothing!")
+        'If ofdSelect.ShowDialog() = DialogResult.OK Then
+        '    Dim input As String = My.Computer.FileSystem.ReadAllText(ofdSelect.FileName)
+        '    MsgBox("Please select a directory to save the transcript file.")
+        '    If sfdExport.ShowDialog() = DialogResult.OK Then
+        '        Dim output As String = ""
+        '        While input.Contains("transcript"": """) = True
+        '            input = input.Remove(0, (input.IndexOf("transcript"": """) - 1)) 'Remove all preceding text before the first transcript chunk
+        '            output += ("Time: " & cirsfile.parseInString(input, "startTime"": """, "s") & vbNewLine) 'Take timestamp
+        '            output += (cirsfile.parseInString(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
+        '            input = input.Remove(0, (input.IndexOf("startTime"": """) - 1)) 'Remove all preceding text before the first timestamp
+        '        End While
+        '        cirsfile.write(output, sfdExport.FileName, True)
+        '    End If
+        '    sfdExport.Dispose()
+        'End If
     End Sub
 End Class

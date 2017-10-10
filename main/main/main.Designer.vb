@@ -24,7 +24,6 @@ Partial Class main
     Private Sub InitializeComponent()
         Me.btnImport = New System.Windows.Forms.Button()
         Me.ofdSelect = New System.Windows.Forms.OpenFileDialog()
-        Me.btnTranscribe = New System.Windows.Forms.Button()
         Me.fbdDir = New System.Windows.Forms.FolderBrowserDialog()
         Me.btnExit = New System.Windows.Forms.Button()
         Me.btnPoll = New System.Windows.Forms.Button()
@@ -51,15 +50,6 @@ Partial Class main
         '
         Me.ofdSelect.Multiselect = True
         '
-        'btnTranscribe
-        '
-        Me.btnTranscribe.Location = New System.Drawing.Point(12, 41)
-        Me.btnTranscribe.Name = "btnTranscribe"
-        Me.btnTranscribe.Size = New System.Drawing.Size(162, 23)
-        Me.btnTranscribe.TabIndex = 1
-        Me.btnTranscribe.Text = "Transcribe Audio File(s)"
-        Me.btnTranscribe.UseVisualStyleBackColor = True
-        '
         'fbdDir
         '
         Me.fbdDir.ShowNewFolderButton = False
@@ -75,7 +65,7 @@ Partial Class main
         '
         'btnPoll
         '
-        Me.btnPoll.Location = New System.Drawing.Point(12, 70)
+        Me.btnPoll.Location = New System.Drawing.Point(12, 41)
         Me.btnPoll.Name = "btnPoll"
         Me.btnPoll.Size = New System.Drawing.Size(162, 23)
         Me.btnPoll.TabIndex = 3
@@ -115,7 +105,7 @@ Partial Class main
         Me.dgJobs.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.jobNumber, Me.jobName, Me.jobStatus})
         Me.dgJobs.Location = New System.Drawing.Point(180, 12)
         Me.dgJobs.Name = "dgJobs"
-        Me.dgJobs.Size = New System.Drawing.Size(349, 150)
+        Me.dgJobs.Size = New System.Drawing.Size(364, 150)
         Me.dgJobs.TabIndex = 6
         '
         'jobNumber
@@ -130,7 +120,7 @@ Partial Class main
         '
         'jobStatus
         '
-        Me.jobStatus.HeaderText = "Job Status"
+        Me.jobStatus.HeaderText = "Job Progress"
         Me.jobStatus.Name = "jobStatus"
         '
         'main
@@ -143,7 +133,6 @@ Partial Class main
         Me.Controls.Add(Me.btnTest)
         Me.Controls.Add(Me.btnPoll)
         Me.Controls.Add(Me.btnExit)
-        Me.Controls.Add(Me.btnTranscribe)
         Me.Controls.Add(Me.btnImport)
         Me.Name = "main"
         Me.Text = "Automatic Transcript v0.8"
@@ -154,7 +143,6 @@ Partial Class main
 
     Friend WithEvents btnImport As Button
     Friend WithEvents ofdSelect As OpenFileDialog
-    Friend WithEvents btnTranscribe As Button
     Friend WithEvents fbdDir As FolderBrowserDialog
     Friend WithEvents btnExit As Button
     Friend WithEvents btnPoll As Button
