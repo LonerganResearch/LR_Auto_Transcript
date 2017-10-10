@@ -6,7 +6,7 @@
 'settings form?
 'file not uploaded error code
 'input box on top
-'base64 encoding
+'Multithread polling
 'allow viewing and deletion of files in batch
 
 Public Class main
@@ -18,15 +18,13 @@ Public Class main
     Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click 'Import mp3 file(s) for conversion to .flac and .json generation
         ofdSelect.Filter = "MP3 files (.mp3)|*.mp3"
         If ofdSelect.ShowDialog() = DialogResult.OK Then
-            Dim bucket As String = InputBox("Please enter the name of the bucket you wish to upload the file for transcription to. This will default to lr_test_transcript", "Select a bucket directory")
 
             For Each trackName As String In ofdSelect.FileNames
-                'Import and force conversion
-                If bucket = "" Then
-                    bucket = "lr_test_transcript"
-                End If
                 runCmd(My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackName & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""") 'MP3 to FLAC conversion
-                cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json", False) 'Write .json file in the same directory
+
+                runCmd(My.Settings.base64Path & "\base64 -e """ & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""") 'FLAC to base64 conversion
+                Dim base64 As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""content"": """ & base64 & """" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json", False) 'Write .json file in the same directory
 
                 'Post for transcription
                 runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
@@ -41,7 +39,7 @@ Public Class main
                 End If
 
                 My.Settings.Save()
-                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                'IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
             Next
             poll()
             'MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket and made public before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
@@ -110,12 +108,14 @@ Public Class main
     '    End If
     'End Sub
 
-    Private Sub runCmd(command As String)
+    Private Sub runCmd(command As String, Optional ByVal waitForExit As Boolean = True)
         Dim cmd As New Process
         With cmd
             .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit"))
             .Start()
-            .WaitForExit()
+            If waitForExit = True Then
+                .WaitForExit()
+            End If
         End With
     End Sub
 
@@ -144,7 +144,7 @@ Public Class main
 
                 IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
             Next
-
+            dgJobs.CurrentRow.Selected = False
             dgJobs.Rows(dgJobs.RowCount - 1).Selected = True 'Remove extra redundant row
             For Each row As DataGridViewRow In dgJobs.SelectedRows
                 dgJobs.Rows.Remove(row)
@@ -201,5 +201,22 @@ Public Class main
         '    End If
         '    sfdExport.Dispose()
         'End If
+    End Sub
+
+    Private Sub btnGetTranscript_Click(sender As Object, e As EventArgs) Handles btnGetTranscript.Click
+        'Stuff
+    End Sub
+
+    Private Sub btnDeleteOp_Click(sender As Object, e As EventArgs) Handles btnDeleteOp.Click
+        If MsgBox("This will permanently remove the operation from the list. The transcript file will be UNRECOVERABLE. Are you sure you want to proceed?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Remove operation permanently?") = MsgBoxResult.Yes Then
+            Dim target As String = ""
+            For Each op As String In My.Settings.operationsList
+                If op.Contains(dgJobs.CurrentRow.Cells(0).Value) Then
+                    target = op
+                End If
+            Next
+            My.Settings.operationsList.Remove(target)
+            poll()
+        End If
     End Sub
 End Class

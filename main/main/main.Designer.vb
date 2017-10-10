@@ -34,6 +34,8 @@ Partial Class main
         Me.jobNumber = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.jobName = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.jobStatus = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.btnGetTranscript = New System.Windows.Forms.Button()
+        Me.btnDeleteOp = New System.Windows.Forms.Button()
         CType(Me.dgJobs, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
@@ -74,7 +76,7 @@ Partial Class main
         '
         'btnTest
         '
-        Me.btnTest.Location = New System.Drawing.Point(107, 174)
+        Me.btnTest.Location = New System.Drawing.Point(12, 70)
         Me.btnTest.Name = "btnTest"
         Me.btnTest.Size = New System.Drawing.Size(162, 23)
         Me.btnTest.TabIndex = 4
@@ -105,6 +107,8 @@ Partial Class main
         Me.dgJobs.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.jobNumber, Me.jobName, Me.jobStatus})
         Me.dgJobs.Location = New System.Drawing.Point(180, 12)
         Me.dgJobs.Name = "dgJobs"
+        Me.dgJobs.ReadOnly = True
+        Me.dgJobs.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
         Me.dgJobs.Size = New System.Drawing.Size(364, 150)
         Me.dgJobs.TabIndex = 6
         '
@@ -123,11 +127,31 @@ Partial Class main
         Me.jobStatus.HeaderText = "Job Progress"
         Me.jobStatus.Name = "jobStatus"
         '
+        'btnGetTranscript
+        '
+        Me.btnGetTranscript.Location = New System.Drawing.Point(214, 168)
+        Me.btnGetTranscript.Name = "btnGetTranscript"
+        Me.btnGetTranscript.Size = New System.Drawing.Size(162, 23)
+        Me.btnGetTranscript.TabIndex = 7
+        Me.btnGetTranscript.Text = "Get Transcript"
+        Me.btnGetTranscript.UseVisualStyleBackColor = True
+        '
+        'btnDeleteOp
+        '
+        Me.btnDeleteOp.Location = New System.Drawing.Point(382, 168)
+        Me.btnDeleteOp.Name = "btnDeleteOp"
+        Me.btnDeleteOp.Size = New System.Drawing.Size(162, 23)
+        Me.btnDeleteOp.TabIndex = 8
+        Me.btnDeleteOp.Text = "Delete Operation"
+        Me.btnDeleteOp.UseVisualStyleBackColor = True
+        '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(556, 209)
+        Me.Controls.Add(Me.btnDeleteOp)
+        Me.Controls.Add(Me.btnGetTranscript)
         Me.Controls.Add(Me.dgJobs)
         Me.Controls.Add(Me.btnReset)
         Me.Controls.Add(Me.btnTest)
@@ -153,4 +177,6 @@ Partial Class main
     Friend WithEvents jobNumber As DataGridViewTextBoxColumn
     Friend WithEvents jobName As DataGridViewTextBoxColumn
     Friend WithEvents jobStatus As DataGridViewTextBoxColumn
+    Friend WithEvents btnGetTranscript As Button
+    Friend WithEvents btnDeleteOp As Button
 End Class
