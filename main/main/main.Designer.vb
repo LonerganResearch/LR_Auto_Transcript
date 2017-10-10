@@ -31,6 +31,11 @@ Partial Class main
         Me.btnTest = New System.Windows.Forms.Button()
         Me.btnReset = New System.Windows.Forms.Button()
         Me.sfdExport = New System.Windows.Forms.SaveFileDialog()
+        Me.dgJobs = New System.Windows.Forms.DataGridView()
+        Me.jobNumber = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.jobName = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.jobStatus = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        CType(Me.dgJobs, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'btnImport
@@ -101,11 +106,39 @@ Partial Class main
         Me.sfdExport.FileName = "Output"
         Me.sfdExport.Filter = "Text file|*.txt"
         '
+        'dgJobs
+        '
+        Me.dgJobs.AllowUserToAddRows = False
+        Me.dgJobs.AllowUserToDeleteRows = False
+        Me.dgJobs.AllowUserToResizeRows = False
+        Me.dgJobs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
+        Me.dgJobs.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.jobNumber, Me.jobName, Me.jobStatus})
+        Me.dgJobs.Location = New System.Drawing.Point(180, 12)
+        Me.dgJobs.Name = "dgJobs"
+        Me.dgJobs.Size = New System.Drawing.Size(349, 150)
+        Me.dgJobs.TabIndex = 6
+        '
+        'jobNumber
+        '
+        Me.jobNumber.HeaderText = "Job Number"
+        Me.jobNumber.Name = "jobNumber"
+        '
+        'jobName
+        '
+        Me.jobName.HeaderText = "Job Name"
+        Me.jobName.Name = "jobName"
+        '
+        'jobStatus
+        '
+        Me.jobStatus.HeaderText = "Job Status"
+        Me.jobStatus.Name = "jobStatus"
+        '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(345, 209)
+        Me.ClientSize = New System.Drawing.Size(556, 209)
+        Me.Controls.Add(Me.dgJobs)
         Me.Controls.Add(Me.btnReset)
         Me.Controls.Add(Me.btnTest)
         Me.Controls.Add(Me.btnPoll)
@@ -114,6 +147,7 @@ Partial Class main
         Me.Controls.Add(Me.btnImport)
         Me.Name = "main"
         Me.Text = "Automatic Transcript v0.8"
+        CType(Me.dgJobs, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
 
     End Sub
@@ -127,4 +161,8 @@ Partial Class main
     Friend WithEvents btnTest As Button
     Friend WithEvents btnReset As Button
     Friend WithEvents sfdExport As SaveFileDialog
+    Friend WithEvents dgJobs As DataGridView
+    Friend WithEvents jobNumber As DataGridViewTextBoxColumn
+    Friend WithEvents jobName As DataGridViewTextBoxColumn
+    Friend WithEvents jobStatus As DataGridViewTextBoxColumn
 End Class

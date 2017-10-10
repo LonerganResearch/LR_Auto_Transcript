@@ -2,6 +2,7 @@
     Public cirsfile As New CIRS_lib.file 'Import library
     Public sampleRate As Integer = 44100 'Used in the ffmpeg conversion
     Public Class operation
+        Property id As String
         Property name As String
         Property progress As String = "0"
     End Class

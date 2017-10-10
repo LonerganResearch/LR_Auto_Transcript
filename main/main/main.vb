@@ -12,9 +12,10 @@
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         initialise()
+        poll()
     End Sub
 
-    Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click
+    Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click 'Import mp3 file(s) for conversion to .flac and .json generation
         ofdSelect.Filter = "MP3 files (.mp3)|*.mp3"
         If ofdSelect.ShowDialog() = DialogResult.OK Then
             Dim bucket As String = InputBox("Please enter the name of the bucket you wish to upload the file for transcription to. This will default to lr_test_transcript", "Select a bucket directory")
@@ -40,49 +41,31 @@ Public Class main
         ofdSelect.Filter = "JSON files (.json)|*.json"
         If ofdSelect.ShowDialog() = DialogResult.OK Then
             For Each trackname As String In ofdSelect.FileNames
-                runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & ofdSelect.FileName & """ https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & ofdSelect.FileName & """ https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
 
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
-                Select Case True
-                    Case output.Contains("code"": 400")
-                        MsgBox("Error code 400: API key not valid. Please pass a valid API key.", MsgBoxStyle.SystemModal, "Error 400")
-                    Case output.Contains("code"": 403")
-                        MsgBox("Error code 403: Source file not made public. Check 'Share publicly' in bucket next to file", MsgBoxStyle.SystemModal, "Error 403")
-                    Case output.Contains("""name"": """)
-                        My.Settings.operationsList.Add(cirsfile.parse(output, """name"": """, """")) 'Retrieve the name of the operation
-                    Case Else
-                        MsgBox("Unspecified error: " & output, MsgBoxStyle.SystemModal, "Unspecified Error")
-                End Select
+                If checkErrors(output, """name"": """) = True Then
+                    Dim opName As String = InputBox("Please enter the name of the operation. This will default to the audio file name.", "Enter operation name")
+                    If opName = "" Then
+                        opName = IO.Path.GetFileNameWithoutExtension(ofdSelect.FileName)
+                    End If
+                    My.Settings.operationsList.Add(cirsfile.parseInString(output, """name"": """, """") & "|" & opName) 'Retrieve the name of the operation and add it to the operations list and then appends it with |JOBNAME
+                End If
 
                 My.Settings.Save()
-                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Uncomment when releasing
+                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
             Next
-
             ofdSelect.Dispose()
             'poll()
         End If
     End Sub
 
     Private Sub btnPoll_Click(sender As Object, e As EventArgs) Handles btnPoll.Click
-        My.Settings.operationsList.Clear()
-        'Test collection
-        'For i = 1 To 5
-        '    My.Settings.operationsList.Add(i)
-        'Next
-        'Dim test As New List(Of String)
-        'For Each str As String In My.Settings.operationsList
-        '    test.Add(str)
-        'Next
-        'Dim out As String = ""
-        'For Each str As String In test
-        '    out += str
-        'Next
-        'MsgBox(out)
-        'poll()
+        poll()
     End Sub
 
     Private Sub btnReset_Click(sender As Object, e As EventArgs) Handles btnReset.Click
-        If MsgBox("Are you sure you want to clear all program settings and respecify dependencies?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Clear Application Settings?") Then
+        If MsgBox("Are you sure you want to clear all program settings and respecify dependencies?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Clear Application Settings?") = MsgBoxResult.Yes Then
             My.Settings.Reset()
             initialise()
         End If
@@ -143,29 +126,33 @@ Public Class main
     End Sub
 
     Private Sub poll()
-        Dim opList As New List(Of operation)
-        For Each op As String In My.Settings.operationsList 'Populate to list
-            Dim operation As New operation
-            operation.name = op
-            opList.Add(operation)
-        Next
-        If opList.Count = 0 Then
+        If My.Settings.operationsList.Count = 0 Then
             MsgBox("There are no current operations on file", MsgBoxStyle.Information, "Error")
         Else
-            For Each op As operation In opList
-                runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & op.name & "?key=" & My.Settings.apiKey & " > " & AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+            dgJobs.Rows.Clear()
+            Dim rowCounter As Integer = 0
+            dgJobs.Rows.Add() 'Add initial row to stop things breaking
+
+            For Each op As String In My.Settings.operationsList 'Populate to list
+                runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
 
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
-                Select Case True
-                    Case output.Contains("code"": 400")
-                        MsgBox("Error code 400: API key not valid. Please pass a valid API key.", MsgBoxStyle.SystemModal, "Error 400")
-                    Case output.Contains("""progressPercent"": ")
-                        op.progress = cirsfile.parse(output, """progressPercent"": ", ",") 'Get percentage
-                    Case Else
-                        MsgBox("Unspecified error: " & output, MsgBoxStyle.SystemModal, "Unspecified Error")
-                End Select
+
+                If checkErrors(output, """progressPercent"": ") = True Then
+                    With dgJobs.Rows(rowCounter)
+                        .Cells(0).Value = cirsfile.parseInString(op, "", "|")
+                        .Cells(1).Value = cirsfile.parseInString(op, "|")
+                        .Cells(2).Value = cirsfile.parseInString(output, """progressPercent"": ", ",") 'Get percentage
+                    End With
+                    rowCounter += 1
+                End If
 
                 IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+            Next
+
+            dgJobs.Rows(dgJobs.RowCount - 1).Selected = True 'Remove extra redundant row
+            For Each row As DataGridViewRow In dgJobs.SelectedRows
+                dgJobs.Rows.Remove(row)
             Next
         End If
     End Sub
@@ -176,8 +163,8 @@ Public Class main
             Dim output As String = ""
             While input.Contains("transcript"": """) = True
                 input = input.Remove(0, (input.IndexOf("transcript"": """) - 1)) 'Remove all preceding text before the first transcript chunk
-                output += ("Time: " & cirsfile.parse(input, "startTime"": """, "s") & vbNewLine) 'Take timestamp
-                output += (cirsfile.parse(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
+                output += ("Time: " & cirsfile.parseInString(input, "startTime"": """, "s") & vbNewLine) 'Take timestamp
+                output += (cirsfile.parseInString(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
                 input = input.Remove(0, (input.IndexOf("startTime"": """) - 1)) 'Remove all preceding text before the first timestamp
             End While
             cirsfile.write(output, sfdExport.FileName, True)
@@ -185,22 +172,40 @@ Public Class main
         sfdExport.Dispose()
     End Sub
 
+    Private Function checkErrors(input As String, clearCondition As String)
+        Dim clear As Boolean = False
+        Select Case True
+            Case input.Contains("code"": 400")
+                MsgBox("Error code 400: API key not valid. Please pass a valid API key.", MsgBoxStyle.Exclamation, "Error 400")
+            Case input.Contains("code"": 403")
+                MsgBox("Error code 403: Source file not made public. Check 'Share publicly' in bucket next to file", MsgBoxStyle.Exclamation, "Error 403")
+            Case input.Contains("code"": 404")
+                MsgBox("Error code 404: Requested entity not found. It has likely been too long since the file was transcribed.", MsgBoxStyle.Exclamation, "Error 404")
+            Case input.Contains(clearCondition)
+                clear = True
+            Case Else
+                MsgBox("Unspecified error: " & input, MsgBoxStyle.SystemModal, "Unspecified Error")
+        End Select
+        Return clear
+    End Function
+
     Private Sub btnTest_Click(sender As Object, e As EventArgs) Handles btnTest.Click
+        My.Settings.operationsList.Add("8635689709546489895|HSJKDFKJSNHFJKWHAF")
         'MsgBox("Nothing!")
-        If ofdSelect.ShowDialog() = DialogResult.OK Then
-            Dim input As String = My.Computer.FileSystem.ReadAllText(ofdSelect.FileName)
-            MsgBox("Please select a directory to save the transcript file.")
-            If sfdExport.ShowDialog() = DialogResult.OK Then
-                Dim output As String = ""
-                While input.Contains("transcript"": """) = True
-                    input = input.Remove(0, (input.IndexOf("transcript"": """) - 1)) 'Remove all preceding text before the first transcript chunk
-                    output += ("Time: " & cirsfile.parse(input, "startTime"": """, "s") & vbNewLine) 'Take timestamp
-                    output += (cirsfile.parse(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
-                    input = input.Remove(0, (input.IndexOf("startTime"": """) - 1)) 'Remove all preceding text before the first timestamp
-                End While
-                cirsfile.write(output, sfdExport.FileName, True)
-            End If
-            sfdExport.Dispose()
-        End If
+        'If ofdSelect.ShowDialog() = DialogResult.OK Then
+        '    Dim input As String = My.Computer.FileSystem.ReadAllText(ofdSelect.FileName)
+        '    MsgBox("Please select a directory to save the transcript file.")
+        '    If sfdExport.ShowDialog() = DialogResult.OK Then
+        '        Dim output As String = ""
+        '        While input.Contains("transcript"": """) = True
+        '            input = input.Remove(0, (input.IndexOf("transcript"": """) - 1)) 'Remove all preceding text before the first transcript chunk
+        '            output += ("Time: " & cirsfile.parseInString(input, "startTime"": """, "s") & vbNewLine) 'Take timestamp
+        '            output += (cirsfile.parseInString(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
+        '            input = input.Remove(0, (input.IndexOf("startTime"": """) - 1)) 'Remove all preceding text before the first timestamp
+        '        End While
+        '        cirsfile.write(output, sfdExport.FileName, True)
+        '    End If
+        '    sfdExport.Dispose()
+        'End If
     End Sub
 End Class
