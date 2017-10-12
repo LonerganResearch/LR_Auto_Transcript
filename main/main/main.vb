@@ -8,7 +8,9 @@
 'remove jobs older than x days
 'loading bar
 'delete .flac and .json generated?
-'conversion and posting takes a while
+'base64 no longer needed
+'Alternative upload method required
+
 
 Public Class main
     Dim clickedID As String = ""
