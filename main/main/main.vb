@@ -3,10 +3,10 @@
 'To do
 'Check if gcloud sdk is installed
 'settings form?
-'file not uploaded error code
 'input box on top
 'allow viewing and deletion of files in batch
 'remove jobs older than x days
+'loading bar
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -107,14 +107,17 @@ Public Class main
     '    End If
     'End Sub
 
-    Private Function runCmd(command As String, Optional ByVal waitForExit As Boolean = True)
+    Private Function runCmd(command As String, Optional ByVal waitForExit As Boolean = True, Optional ByVal hidden As Boolean = False)
         Dim cmd As New Process
         With cmd
             .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit"))
-            .Start()
             If waitForExit = True Then
                 .WaitForExit()
             End If
+            If hidden = True Then
+                .StartInfo.WindowStyle = ProcessWindowStyle.Hidden
+            End If
+            .Start()
         End With
         Return cmd
     End Function
@@ -123,16 +126,18 @@ Public Class main
         dgJobs.Rows.Clear()
         If My.Settings.operationsList.Count = 0 Then
             MsgBox("There are no current operations on file", MsgBoxStyle.Information, "No operations found")
+            btnGetTranscript.Enabled = False
+            btnDeleteOp.Enabled = False
         Else
             btnGetTranscript.Enabled = True
             Dim rowCounter As Integer = 0
             dgJobs.Rows.Add() 'Add initial row to stop things breaking
 
-            Dim cmdList As New List(Of Process)
+            Dim cmdList As New List(Of Process) 'List of polling processes
             Dim cmdPollDone As Boolean = False
 
-            For Each op As String In My.Settings.operationsList
-                cmdList.Add(runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt""", False))
+            For Each op As String In My.Settings.operationsList 'Append list of polling processes 
+                cmdList.Add(runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt""", False, True))
             Next
 
             While cmdPollDone = False
@@ -148,9 +153,7 @@ Public Class main
             End While
 
             For Each op As String In My.Settings.operationsList 'Populate to list
-
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt") 'Retrieve results of the operation
-
                 If checkErrors(output, """progressPercent"": ") = False Then
                     With dgJobs.Rows(rowCounter)
                         .Cells(0).Value = cirsfile.parseInString(op, "", "|")
@@ -160,7 +163,6 @@ Public Class main
                     dgJobs.Rows.Add()
                     rowCounter += 1
                 End If
-
                 IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt")
             Next
             dgJobs.CurrentRow.Selected = False
@@ -243,5 +245,9 @@ Public Class main
             My.Settings.Save()
             poll()
         End If
+    End Sub
+
+    Private Sub dgJobs_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgJobs.CellClick
+        btnDeleteOp.Enabled = True
     End Sub
 End Class
