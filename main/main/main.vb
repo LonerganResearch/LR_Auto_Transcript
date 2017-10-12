@@ -7,8 +7,12 @@
 'allow viewing and deletion of files in batch
 'remove jobs older than x days
 'loading bar
+'delete .flac and .json generated?
+'conversion and posting takes a while
 
 Public Class main
+    Dim clickedID As String = ""
+
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         initialise()
         poll()
@@ -35,13 +39,13 @@ Public Class main
                         opName = IO.Path.GetFileNameWithoutExtension(trackName)
                     End If
                     My.Settings.operationsList.Add(cirsfile.parseInString(output, """name"": """, """") & "|" & opName) 'Retrieve the name of the operation and add it to the operations list and then appends it with |JOBNAME
+                    MsgBox("File(s) uploaded for transcription.", MsgBoxStyle.ApplicationModal, "Upload Complete")
                 End If
 
                 My.Settings.Save()
                 IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
             Next
             poll()
-            MsgBox("File(s) uploaded for transcription.", MsgBoxStyle.ApplicationModal, "Upload Complete")
             ofdSelect.Dispose()
         End If
     End Sub
@@ -111,28 +115,26 @@ Public Class main
         Dim cmd As New Process
         With cmd
             .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit"))
-            If waitForExit = True Then
-                .WaitForExit()
-            End If
             If hidden = True Then
                 .StartInfo.WindowStyle = ProcessWindowStyle.Hidden
             End If
             .Start()
+            If waitForExit = True Then
+                .WaitForExit()
+            End If
         End With
         Return cmd
     End Function
 
     Private Sub poll()
-        dgJobs.Rows.Clear()
+        flpOperations.Controls.Clear()
         If My.Settings.operationsList.Count = 0 Then
             MsgBox("There are no current operations on file", MsgBoxStyle.Information, "No operations found")
             btnGetTranscript.Enabled = False
             btnDeleteOp.Enabled = False
+            btnPoll.Enabled = False
         Else
-            btnGetTranscript.Enabled = True
-            Dim rowCounter As Integer = 0
-            dgJobs.Rows.Add() 'Add initial row to stop things breaking
-
+            btnPoll.Enabled = True
             Dim cmdList As New List(Of Process) 'List of polling processes
             Dim cmdPollDone As Boolean = False
 
@@ -152,26 +154,65 @@ Public Class main
                 End If
             End While
 
+            'Filling panels
             For Each op As String In My.Settings.operationsList 'Populate to list
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt") 'Retrieve results of the operation
-                If checkErrors(output, """progressPercent"": ") = False Then
-                    With dgJobs.Rows(rowCounter)
-                        .Cells(0).Value = cirsfile.parseInString(op, "", "|")
-                        .Cells(1).Value = cirsfile.parseInString(op, "|")
-                        .Cells(2).Value = cirsfile.parseInString(output, """progressPercent"": ", ",") & "%" 'Get percentage
-                    End With
-                    dgJobs.Rows.Add()
-                    rowCounter += 1
+                If checkErrors(output, "name"": ") = False Then
+                    Dim panelColor As Color = Color.DeepSkyBlue
+                    If output.Contains("progressPercent"": 100") Then
+                        panelColor = Color.Green
+                    End If
+                    Dim newpanel As New Panel With
+                        {
+                        .Margin = New Padding(3, 3, 3, 3),
+                        .Height = 55,
+                        .Width = 140,
+                        .BackColor = panelColor,
+                        .Name = cirsfile.parseInString(op, "", "|"),
+                        .Tag = cirsfile.parseInString(output, """progressPercent"": ", ",")
+                        }
+                    Dim ID As New Label With
+                        {
+                        .Text = cirsfile.parseInString(op, "", "|"),
+                        .Font = New Font("Segoe UI", 9, FontStyle.Bold),
+                        .Height = 15,
+                        .Location = New Point(0, 0),
+                        .Name = cirsfile.parseInString(op, "", "|") & ".id"
+                        }
+
+                    Dim name As New Label With
+                        {
+                        .Text = cirsfile.parseInString(op, "|"),
+                        .Font = New Font("Segoe UI", 8),
+                        .Height = 13,
+                        .Location = New Point(0, 15),
+                        .Name = cirsfile.parseInString(op, "", "|") + ".name"
+                        }
+
+                    Dim progress As New Label With
+                        {
+                        .Text = cirsfile.parseInString(output, """progressPercent"": ", ",") & "%", 'Get percentage
+                        .Font = New Font("Segoe UI", 8),
+                        .Height = 13,
+                        .Location = New Point(0, 28),
+                        .Name = cirsfile.parseInString(op, "", "|") + ".progress"
+                        }
+
+                    newpanel.Controls.Add(ID)
+                    newpanel.Controls.Add(name)
+                    newpanel.Controls.Add(progress)
+
+                    flpOperations.Controls.Add(newpanel)
+                    AddHandler newpanel.MouseClick, AddressOf panelClicked
+                    AddHandler ID.MouseClick, AddressOf labelClicked
+                    AddHandler name.MouseClick, AddressOf labelClicked
+                    AddHandler progress.MouseClick, AddressOf labelClicked
                 End If
                 IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt")
             Next
-            dgJobs.CurrentRow.Selected = False
-            dgJobs.Rows(dgJobs.RowCount - 1).Selected = True 'Remove extra redundant row
-            For Each row As DataGridViewRow In dgJobs.SelectedRows
-                dgJobs.Rows.Remove(row)
-            Next
         End If
     End Sub
+
 
     Private Sub cleanScript(input As String)
         MsgBox("Please select a directory to save the transcript file.")
@@ -190,18 +231,11 @@ Public Class main
 
     Private Function checkErrors(input As String, clearCondition As String)
         Dim foundError As Boolean = True
-        Select Case True
-            Case input.Contains("code"": 400")
-                MsgBox("Error code 400: API key not valid. Please pass a valid API key.", MsgBoxStyle.Exclamation, "Error 400")
-            Case input.Contains("code"": 403")
-                MsgBox("Error code 403: Source file not made public. Check 'Share publicly' in bucket next to file", MsgBoxStyle.Exclamation, "Error 403")
-            Case input.Contains("code"": 404")
-                MsgBox("Error code 404: Requested entity not found. It has likely been too long since the file was transcribed.", MsgBoxStyle.Exclamation, "Error 404")
-            Case input.Contains(clearCondition)
-                foundError = False
-            Case Else
-                MsgBox("Unspecified error: " & input, MsgBoxStyle.SystemModal, "Unspecified Error")
-        End Select
+        If input.Contains(clearCondition) Then
+            foundError = False
+        Else
+            MsgBox("Error code " & cirsfile.parseInString(input, "code"": ", ",") & ": " & cirsfile.parseInString(input, "message"": """, """"), MsgBoxStyle.SystemModal, "Error " & cirsfile.parseInString(input, "code"": ", ","))
+        End If
         Return foundError
     End Function
 
@@ -225,7 +259,7 @@ Public Class main
     End Sub
 
     Private Sub btnGetTranscript_Click(sender As Object, e As EventArgs) Handles btnGetTranscript.Click
-        runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & dgJobs.CurrentRow.Cells(0).Value & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
+        runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
 
         Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
         If checkErrors(output, """progressPercent"": ") = False And output.Contains("progressPercent"": 100") Then
@@ -237,17 +271,34 @@ Public Class main
         If MsgBox("This will permanently remove the operation from the list. The transcript file will be UNRECOVERABLE. Are you sure you want to proceed?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Remove operation permanently?") = MsgBoxResult.Yes Then
             Dim target As String = ""
             For Each op As String In My.Settings.operationsList
-                If op.Contains(dgJobs.CurrentRow.Cells(0).Value) Then
+                If op.Contains(clickedID) Then
                     target = op
                 End If
             Next
+            btnGetTranscript.Enabled = False
             My.Settings.operationsList.Remove(target)
             My.Settings.Save()
             poll()
         End If
     End Sub
 
-    Private Sub dgJobs_CellClick(sender As Object, e As DataGridViewCellEventArgs) Handles dgJobs.CellClick
+    Private Sub panelClicked(sender As Object, e As EventArgs)
+        Dim clicked As Panel = sender
+        'Panel selection here
+        For Each panel As Panel In flpOperations.Controls
+            If panel.Tag = "100" Then
+                panel.BackColor = Color.Green
+            Else
+                panel.BackColor = Color.DeepSkyBlue
+            End If
+        Next
+        clicked.BackColor = Color.Orange
         btnDeleteOp.Enabled = True
+        btnGetTranscript.Enabled = True
+        clickedID = clicked.Name
+    End Sub
+
+    Private Sub labelClicked(sender As Object, e As EventArgs)
+        panelClicked(sender.Parent, e)
     End Sub
 End Class

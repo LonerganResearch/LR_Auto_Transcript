@@ -30,13 +30,9 @@ Partial Class main
         Me.btnTest = New System.Windows.Forms.Button()
         Me.btnReset = New System.Windows.Forms.Button()
         Me.sfdExport = New System.Windows.Forms.SaveFileDialog()
-        Me.dgJobs = New System.Windows.Forms.DataGridView()
         Me.btnGetTranscript = New System.Windows.Forms.Button()
         Me.btnDeleteOp = New System.Windows.Forms.Button()
-        Me.jobNumber = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.jobName = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.jobStatus = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        CType(Me.dgJobs, System.ComponentModel.ISupportInitialize).BeginInit()
+        Me.flpOperations = New System.Windows.Forms.FlowLayoutPanel()
         Me.SuspendLayout()
         '
         'btnImport
@@ -67,6 +63,7 @@ Partial Class main
         '
         'btnPoll
         '
+        Me.btnPoll.Enabled = False
         Me.btnPoll.Location = New System.Drawing.Point(12, 41)
         Me.btnPoll.Name = "btnPoll"
         Me.btnPoll.Size = New System.Drawing.Size(162, 23)
@@ -97,21 +94,7 @@ Partial Class main
         Me.sfdExport.DefaultExt = "txt"
         Me.sfdExport.FileName = "Output"
         Me.sfdExport.Filter = "Text file|*.txt"
-        '
-        'dgJobs
-        '
-        Me.dgJobs.AllowUserToAddRows = False
-        Me.dgJobs.AllowUserToDeleteRows = False
-        Me.dgJobs.AllowUserToResizeRows = False
-        Me.dgJobs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        Me.dgJobs.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.jobNumber, Me.jobName, Me.jobStatus})
-        Me.dgJobs.Location = New System.Drawing.Point(180, 12)
-        Me.dgJobs.MultiSelect = False
-        Me.dgJobs.Name = "dgJobs"
-        Me.dgJobs.ReadOnly = True
-        Me.dgJobs.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
-        Me.dgJobs.Size = New System.Drawing.Size(401, 150)
-        Me.dgJobs.TabIndex = 6
+        Me.sfdExport.OverwritePrompt = False
         '
         'btnGetTranscript
         '
@@ -133,33 +116,21 @@ Partial Class main
         Me.btnDeleteOp.Text = "Delete Operation"
         Me.btnDeleteOp.UseVisualStyleBackColor = True
         '
-        'jobNumber
+        'flpOperations
         '
-        Me.jobNumber.HeaderText = "Job Number"
-        Me.jobNumber.Name = "jobNumber"
-        Me.jobNumber.ReadOnly = True
-        Me.jobNumber.Width = 155
-        '
-        'jobName
-        '
-        Me.jobName.HeaderText = "Job Name"
-        Me.jobName.Name = "jobName"
-        Me.jobName.ReadOnly = True
-        '
-        'jobStatus
-        '
-        Me.jobStatus.HeaderText = "Job Progress"
-        Me.jobStatus.Name = "jobStatus"
-        Me.jobStatus.ReadOnly = True
+        Me.flpOperations.Location = New System.Drawing.Point(180, 12)
+        Me.flpOperations.Name = "flpOperations"
+        Me.flpOperations.Size = New System.Drawing.Size(401, 150)
+        Me.flpOperations.TabIndex = 9
         '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(593, 209)
+        Me.ClientSize = New System.Drawing.Size(593, 206)
+        Me.Controls.Add(Me.flpOperations)
         Me.Controls.Add(Me.btnDeleteOp)
         Me.Controls.Add(Me.btnGetTranscript)
-        Me.Controls.Add(Me.dgJobs)
         Me.Controls.Add(Me.btnReset)
         Me.Controls.Add(Me.btnTest)
         Me.Controls.Add(Me.btnPoll)
@@ -170,7 +141,6 @@ Partial Class main
         Me.Name = "main"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "Automatic Transcript v0.9"
-        CType(Me.dgJobs, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
 
     End Sub
@@ -183,10 +153,7 @@ Partial Class main
     Friend WithEvents btnTest As Button
     Friend WithEvents btnReset As Button
     Friend WithEvents sfdExport As SaveFileDialog
-    Friend WithEvents dgJobs As DataGridView
     Friend WithEvents btnGetTranscript As Button
     Friend WithEvents btnDeleteOp As Button
-    Friend WithEvents jobNumber As DataGridViewTextBoxColumn
-    Friend WithEvents jobName As DataGridViewTextBoxColumn
-    Friend WithEvents jobStatus As DataGridViewTextBoxColumn
+    Friend WithEvents flpOperations As FlowLayoutPanel
 End Class
