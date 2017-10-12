@@ -2,7 +2,6 @@
 
 'To do
 'Check if gcloud sdk is installed
-'Datagrid for polling
 'settings form?
 'file not uploaded error code
 'input box on top
@@ -31,7 +30,7 @@ Public Class main
 
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
                 If checkErrors(output, """name"": """) = False Then
-                    Dim opName As String = InputBox("Please enter the name of the operation. This will default to the audio file name.", "Enter operation name")
+                    Dim opName As String = InputBox("Please enter the name of the operation. This will default to " & IO.Path.GetFileNameWithoutExtension(trackName) & ".", "Enter operation name")
                     If opName = "" Then
                         opName = IO.Path.GetFileNameWithoutExtension(trackName)
                     End If
@@ -39,10 +38,10 @@ Public Class main
                 End If
 
                 My.Settings.Save()
-                'IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
             Next
             poll()
-            'MsgBox("MP3 to FLAC conversion and relevant .json file generation complete. Ensure that the FLAC files are uploaded to the specified bucket and made public before requesting transcription.", MsgBoxStyle.ApplicationModal, "Conversion Complete")
+            MsgBox("File(s) uploaded for transcription.", MsgBoxStyle.ApplicationModal, "Upload Complete")
             ofdSelect.Dispose()
         End If
     End Sub
@@ -120,19 +119,24 @@ Public Class main
     End Sub
 
     Private Sub poll()
+        dgJobs.Rows.Clear()
         If My.Settings.operationsList.Count = 0 Then
-            MsgBox("There are no current operations on file", MsgBoxStyle.Information, "Error")
+            MsgBox("There are no current operations on file", MsgBoxStyle.Information, "No operations found")
         Else
-            dgJobs.Rows.Clear()
+            btnGetTranscript.Enabled = True
             Dim rowCounter As Integer = 0
             dgJobs.Rows.Add() 'Add initial row to stop things breaking
 
+            For Each op As String In My.Settings.operationsList
+
+                runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt""", False)
+            Next
+            'Wait for end
             For Each op As String In My.Settings.operationsList 'Populate to list
-                runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
 
-                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
+                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt") 'Retrieve results of the operation
+
                 If checkErrors(output, """progressPercent"": ") = False Then
-
                     With dgJobs.Rows(rowCounter)
                         .Cells(0).Value = cirsfile.parseInString(op, "", "|")
                         .Cells(1).Value = cirsfile.parseInString(op, "|")
@@ -142,7 +146,7 @@ Public Class main
                     rowCounter += 1
                 End If
 
-                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt")
             Next
             dgJobs.CurrentRow.Selected = False
             dgJobs.Rows(dgJobs.RowCount - 1).Selected = True 'Remove extra redundant row
@@ -162,7 +166,7 @@ Public Class main
                 output += (cirsfile.parseInString(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
                 input = input.Remove(0, (input.IndexOf("startTime"": """) - 1)) 'Remove all preceding text before the first timestamp
             End While
-            cirsfile.write(output, sfdExport.FileName, True)
+            cirsfile.write(output, sfdExport.FileName, False)
         End If
         sfdExport.Dispose()
     End Sub
@@ -204,7 +208,12 @@ Public Class main
     End Sub
 
     Private Sub btnGetTranscript_Click(sender As Object, e As EventArgs) Handles btnGetTranscript.Click
-        'Stuff
+        runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & dgJobs.CurrentRow.Cells(0).Value & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
+
+        Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
+        If checkErrors(output, """progressPercent"": ") = False And output.Contains("progressPercent"": 100") Then
+            cleanScript(output)
+        End If
     End Sub
 
     Private Sub btnDeleteOp_Click(sender As Object, e As EventArgs) Handles btnDeleteOp.Click
@@ -216,6 +225,7 @@ Public Class main
                 End If
             Next
             My.Settings.operationsList.Remove(target)
+            My.Settings.Save()
             poll()
         End If
     End Sub

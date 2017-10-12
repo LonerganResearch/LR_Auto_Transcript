@@ -106,6 +106,7 @@ Partial Class main
         Me.dgJobs.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
         Me.dgJobs.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.jobNumber, Me.jobName, Me.jobStatus})
         Me.dgJobs.Location = New System.Drawing.Point(180, 12)
+        Me.dgJobs.MultiSelect = False
         Me.dgJobs.Name = "dgJobs"
         Me.dgJobs.ReadOnly = True
         Me.dgJobs.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
@@ -116,19 +117,23 @@ Partial Class main
         '
         Me.jobNumber.HeaderText = "Job Number"
         Me.jobNumber.Name = "jobNumber"
+        Me.jobNumber.ReadOnly = True
         '
         'jobName
         '
         Me.jobName.HeaderText = "Job Name"
         Me.jobName.Name = "jobName"
+        Me.jobName.ReadOnly = True
         '
         'jobStatus
         '
         Me.jobStatus.HeaderText = "Job Progress"
         Me.jobStatus.Name = "jobStatus"
+        Me.jobStatus.ReadOnly = True
         '
         'btnGetTranscript
         '
+        Me.btnGetTranscript.Enabled = False
         Me.btnGetTranscript.Location = New System.Drawing.Point(214, 168)
         Me.btnGetTranscript.Name = "btnGetTranscript"
         Me.btnGetTranscript.Size = New System.Drawing.Size(162, 23)
