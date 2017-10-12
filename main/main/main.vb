@@ -5,8 +5,8 @@
 'settings form?
 'file not uploaded error code
 'input box on top
-'Multithread polling
 'allow viewing and deletion of files in batch
+'remove jobs older than x days
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -107,7 +107,7 @@ Public Class main
     '    End If
     'End Sub
 
-    Private Sub runCmd(command As String, Optional ByVal waitForExit As Boolean = True)
+    Private Function runCmd(command As String, Optional ByVal waitForExit As Boolean = True)
         Dim cmd As New Process
         With cmd
             .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit"))
@@ -116,7 +116,8 @@ Public Class main
                 .WaitForExit()
             End If
         End With
-    End Sub
+        Return cmd
+    End Function
 
     Private Sub poll()
         dgJobs.Rows.Clear()
@@ -127,11 +128,25 @@ Public Class main
             Dim rowCounter As Integer = 0
             dgJobs.Rows.Add() 'Add initial row to stop things breaking
 
-            For Each op As String In My.Settings.operationsList
+            Dim cmdList As New List(Of Process)
+            Dim cmdPollDone As Boolean = False
 
-                runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt""", False)
+            For Each op As String In My.Settings.operationsList
+                cmdList.Add(runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt""", False))
             Next
-            'Wait for end
+
+            While cmdPollDone = False
+                Dim i = 0
+                For Each process As Process In cmdList
+                    If process.HasExited = True Then
+                        i += 1
+                    End If
+                Next
+                If i = cmdList.Count Then
+                    cmdPollDone = True
+                End If
+            End While
+
             For Each op As String In My.Settings.operationsList 'Populate to list
 
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt") 'Retrieve results of the operation
