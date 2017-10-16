@@ -126,6 +126,18 @@ Namespace My
                 Me("sAKeyPath") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+        Public Property varPath() As String
+            Get
+                Return CType(Me("varPath"),String)
+            End Get
+            Set
+                Me("varPath") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

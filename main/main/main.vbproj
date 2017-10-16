@@ -108,6 +108,7 @@
       <LastGenOutput>Settings.Designer.vb</LastGenOutput>
     </None>
     <None Include="App.config" />
+    <None Include="Resources\makePublic.json" />
     <None Include="Resources\serviceAccountKey.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

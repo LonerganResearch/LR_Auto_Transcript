@@ -71,12 +71,14 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized resource of type System.Byte[].
+        '''  Looks up a localized string similar to {
+        '''  &quot;entity&quot;: &quot;allUsers&quot;,
+        '''  &quot;role&quot;: &quot;READER&quot;
+        '''}.
         '''</summary>
-        Friend ReadOnly Property serviceAccountKey() As Byte()
+        Friend ReadOnly Property makePublic() As String
             Get
-                Dim obj As Object = ResourceManager.GetObject("serviceAccountKey", resourceCulture)
-                Return CType(obj,Byte())
+                Return ResourceManager.GetString("makePublic", resourceCulture)
             End Get
         End Property
         
