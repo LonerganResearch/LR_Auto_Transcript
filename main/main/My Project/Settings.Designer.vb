@@ -69,18 +69,6 @@ Namespace My
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("")>  _
-        Public Property authToken() As String
-            Get
-                Return CType(Me("authToken"),String)
-            End Get
-            Set
-                Me("authToken") = value
-            End Set
-        End Property
-        
-        <Global.System.Configuration.UserScopedSettingAttribute(),  _
-         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
-         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
         Public Property curlPath() As String
             Get
                 Return CType(Me("curlPath"),String)
@@ -118,12 +106,24 @@ Namespace My
         <Global.System.Configuration.UserScopedSettingAttribute(),  _
          Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
          Global.System.Configuration.DefaultSettingValueAttribute("")>  _
-        Public Property base64Path() As String
+        Public Property gcloudPath() As String
             Get
-                Return CType(Me("base64Path"),String)
+                Return CType(Me("gcloudPath"),String)
             End Get
             Set
-                Me("base64Path") = value
+                Me("gcloudPath") = value
+            End Set
+        End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("")>  _
+        Public Property sAKeyPath() As String
+            Get
+                Return CType(Me("sAKeyPath"),String)
+            End Get
+            Set
+                Me("sAKeyPath") = value
             End Set
         End Property
     End Class

@@ -61,12 +61,32 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized resource of type System.Byte[].
+        '''</summary>
+        Friend ReadOnly Property GoogleCloudSDKInstaller() As Byte()
+            Get
+                Dim obj As Object = ResourceManager.GetObject("GoogleCloudSDKInstaller", resourceCulture)
+                Return CType(obj,Byte())
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Byte[].
+        '''</summary>
+        Friend ReadOnly Property serviceAccountKey() As Byte()
+            Get
+                Dim obj As Object = ResourceManager.GetObject("serviceAccountKey", resourceCulture)
+                Return CType(obj,Byte())
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to {
         '''  &quot;config&quot;: {
         '''      &quot;encoding&quot;:&quot;FLAC&quot;,
         '''      &quot;sampleRateHertz&quot;: 44100,
-        '''      &quot;languageCode&quot;: &quot;en-UK&quot;,
-        '''      &quot;enableWordTimeOffsets&quot;: false
+        '''      &quot;languageCode&quot;: &quot;en-AU&quot;,
+        '''      &quot;enableWordTimeOffsets&quot;: true
         '''  },
         '''  &quot;audio&quot;: {.
         '''</summary>

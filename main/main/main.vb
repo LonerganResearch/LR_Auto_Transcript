@@ -1,15 +1,14 @@
 ﻿Imports CIRS_lib
 
 'To do
-'Check if gcloud sdk is installed
+'Check if authToken is empty
 'settings form?
 'input box on top
 'allow viewing and deletion of files in batch
 'remove jobs older than x days
 'loading bar
 'delete .flac and .json generated?
-'base64 no longer needed
-'Alternative upload method required
+'dependency unzipping
 
 
 Public Class main
@@ -20,19 +19,23 @@ Public Class main
         poll()
     End Sub
 
+    'Controls
     Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click 'Import mp3 file(s) for conversion to .flac and .json generation
         ofdSelect.Filter = "MP3 files (.mp3)|*.mp3"
         If ofdSelect.ShowDialog() = DialogResult.OK Then
-
+            getAuthToken()
+            MsgBox(authToken)
             For Each trackName As String In ofdSelect.FileNames
-                runCmd(My.Settings.ffmpegPath & "\ffmpeg -y -i """ & trackName & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""") 'MP3 to FLAC conversion
+                runCmd(My.Settings.ffmpegPath & "ffmpeg -y -i """ & trackName & """ -ar " & sampleRate & " -ac 1 """ & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""") 'MP3 to FLAC conversion
+                MsgBox("Done")
+                'Upload file
+                'Make public
 
-                runCmd(My.Settings.base64Path & "\base64 -e """ & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""") 'FLAC to base64 conversion
-                Dim base64 As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
-                cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""content"": """ & base64 & """" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json", False) 'Write .json file in the same directory
+                'Generate .json
+                'cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""content"": """ & base64 & """" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json", False) 'Write .json file in the same directory
 
                 'Post for transcription
-                runCmd(My.Settings.curlPath & "\curl -X POST -d @""" & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & My.Settings.apiKey & " --header ""Content-Type:application/json"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
+                runCmd(My.Settings.curlPath & "curl -X POST -d @""" & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & apiKey & " --header ""Content-Type:application/json"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
 
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
                 If checkErrors(output, """name"": """) = False Then
@@ -67,66 +70,139 @@ Public Class main
         End If
     End Sub
 
+    Private Sub btnTest_Click(sender As Object, e As EventArgs) Handles btnTest.Click
+        'MsgBox("Nothing!")
+        MsgBox(Environment.GetEnvironmentVariable("PATH"))
+        'If sfdExport.ShowDialog = DialogResult.OK Then
+        'IO.File.WriteAllBytes("C: \Users\rei.kaneko.LONERGAN\Downloads\test\curl.zip", My.Resources.curl)
+        'If ofdSelect.ShowDialog = DialogResult.OK Then
+        '    If fbdDir.ShowDialog = DialogResult.OK Then
+        '        'Unzip
+        '    End If
+        'End If
+        'End If
+    End Sub
+
+    Private Sub btnGetTranscript_Click(sender As Object, e As EventArgs) Handles btnGetTranscript.Click
+        runCmd(My.Settings.curlPath & "curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
+
+        Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
+        If checkErrors(output, """progressPercent"": ") = False And output.Contains("progressPercent"": 100") Then
+            cleanScript(output)
+        End If
+    End Sub
+
+    Private Sub btnDeleteOp_Click(sender As Object, e As EventArgs) Handles btnDeleteOp.Click
+        If MsgBox("This will permanently remove the operation from the list. The transcript file will be UNRECOVERABLE. Are you sure you want to proceed?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Remove operation permanently?") = MsgBoxResult.Yes Then
+            Dim target As String = ""
+            For Each op As String In My.Settings.operationsList
+                If op.Contains(clickedID) Then
+                    target = op
+                End If
+            Next
+            btnGetTranscript.Enabled = False
+            My.Settings.operationsList.Remove(target)
+            My.Settings.Save()
+            poll()
+        End If
+    End Sub
+
+    'Subs
     Private Sub initialise()
         If My.Settings.operationsList Is Nothing Then 'Initialises string collection
             My.Settings.operationsList = New System.Collections.Specialized.StringCollection
         End If
 
+        checkDirs("Google Cloud SDK", "gcloudPath")
         checkDirs("ffmpeg", "ffmpegPath", "http://ffmpeg.zeranoe.com/builds/")
         checkDirs("curl", "curlPath", "https://curl.haxx.se/dlwiz/?type=bin&os=Win64&flav=-&ver=*&cpu=x86_64")
-        checkDirs("base64", "base64Path", "https://www.fourmilab.ch/webtools/base64/")
 
-        If My.Settings.apiKey = "" Then
-            My.Settings.apiKey = InputBox("Please paste the API key from APIs > Credentials here.", "Paste API Key")
-            If My.Settings.apiKey = "" Then
-                MsgBox("An API key is required to transcribe files", MsgBoxStyle.Critical, "Critical Error")
+        'API key is hardcoded for the time being
+        'If apiKey = "" Then
+        '    apiKey = InputBox("Please paste the API key from APIs > Credentials here.", "Paste API Key")
+        '    If apiKey = "" Then
+        '        MsgBox("An API key is required to transcribe files", MsgBoxStyle.Critical, "Critical Error")
+        '        End
+        '    End If
+        '    My.Settings.Save()
+        'End If
+
+        If My.Settings.sAKeyPath = "" Then 'Check a Service Account Key has been located
+            MsgBox("A Service Account Key is required to interface with Google. It is located by default in L:\Company Administration\Transcripts\serviceAccountKey.json. Please select it.", MsgBoxStyle.SystemModal, "Service Account Key required")
+            With ofdSelect
+                .Filter = "JSON file (.json)|*.json"
+                .Multiselect = False
+            End With
+            If ofdSelect.ShowDialog() = DialogResult.OK Then
+                My.Settings.sAKeyPath = ofdSelect.FileName
+                My.Settings.Save()
+                runCmd("gcloud auth activate-service-account --key-file=""" & My.Settings.sAKeyPath & """") 'Activate service account key with gcloud (first run thing)
+                getAuthToken()
+            End If
+            ofdSelect.Dispose()
+        End If
+    End Sub
+
+    Private Sub checkDirs(program As String, path As String, Optional ByVal url As String = "") 'Check that dependencies exist
+        If My.Settings.Item(path) = "" Then 'Check that the path is not empty
+            Select Case program
+                Case "Google Cloud SDK"
+                    If MsgBox(program & " Is required to run this application. Please select the topmost folder of the program, Or press Cancel to initiate installation.", MsgBoxStyle.SystemModal & MsgBoxStyle.OkCancel, "Dependency not found") = MsgBoxResult.Ok Then
+                        While fbdDir.ShowDialog() <> DialogResult.OK Or Not IO.Directory.Exists(fbdDir.SelectedPath & "\google-cloud-sdk")
+                            If MsgBox(program & "not found. Respecify directory?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Error") = MsgBoxResult.No Then
+                                installGcloud()
+                            End If
+                        End While
+                    Else
+                        installGcloud()
+                    End If
+                    My.Settings.gcloudPath = """" & fbdDir.SelectedPath & "\google-cloud-sdk\bin\"""
+                    My.Settings.Save()
+                Case Else
+                    MsgBox("The directory for " & program & " has not been specified. Please select the 'bin' folder containing " & program, MsgBoxStyle.SystemModal, "Dependency Not Found")
+                    While fbdDir.ShowDialog() <> DialogResult.OK Or Not IO.File.Exists(fbdDir.SelectedPath & "\" & program & ".exe")
+                        If MsgBox(program & ".exe not found. Respecify directory?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Error") = MsgBoxResult.No Then
+                            MsgBox(program & " is required to run this application. Please install " & program & " and then relaunch.", MsgBoxStyle.Critical, "Critical Error")
+                            Process.Start(url) 'Link to download page
+                            End
+                        End If
+                    End While
+                    My.Settings.Item(path) = """" & fbdDir.SelectedPath & "\"""
+                    fbdDir.Dispose()
+                    My.Settings.Save()
+            End Select
+        End If
+    End Sub
+
+    Private Sub installGcloud()
+        MsgBox("Please select a directory to install the Google Cloud SDK", MsgBoxStyle.SystemModal, "Select install directory")
+        While fbdDir.ShowDialog <> DialogResult.OK
+            If MsgBox("Google Cloud SDK must be installed. Select a directory or press Cancel to quit.", MsgBoxStyle.SystemModal & MsgBoxStyle.OkCancel, "Dependency required") = MsgBoxResult.Cancel Then
                 End
             End If
+        End While
+
+        MsgBox("Google Cloud SDK is now installing. This may take a while.", MsgBoxStyle.SystemModal, "Installation started")
+        IO.File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory & "GoogleCloudSDKInstaller.exe", My.Resources.GoogleCloudSDKInstaller)
+        runCmd("GoogleCloudSDKInstaller /S /allusers /noreporting /nodesktop /D=" & fbdDir.SelectedPath & "\CloudSDK", , True)
+        If IO.File.Exists(fbdDir.SelectedPath & "\CloudSDK\uninstaller.exe") Then
+            MsgBox("Google Cloud SDK installation complete.", MsgBoxStyle.SystemModal, "Installation completed")
+            My.Settings.gcloudPath = """" & fbdDir.SelectedPath & "\CloudSDK\google-cloud-sdk\bin\"""
             My.Settings.Save()
+        Else
+            MsgBox("Google Cloud SDK installation failed. Please seek an administrator for further assistance.", MsgBoxStyle.Critical, "Critical Error")
+            End
         End If
+        fbdDir.Dispose()
+        IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "GoogleCloudSDKInstaller.exe")
     End Sub
 
-    Private Sub checkDirs(program As String, path As String, url As String) 'Check that dependencies exist
-        If My.Settings.Item(path) = "" Then 'Check that the path is not empty
-            MsgBox("The directory for " & program & " has not been specified. Please select the folder containing " & program, MsgBoxStyle.ApplicationModal + MsgBoxStyle.SystemModal, "Dependency Not Found")
-            While fbdDir.ShowDialog() <> DialogResult.OK Or Not IO.File.Exists(fbdDir.SelectedPath & "\" & program & ".exe")
-                If MsgBox(program & ".exe not found. Respecify directory?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Error") = MsgBoxResult.No Then
-                    MsgBox(program & " is required to run this application. Please install " & program & " and then relaunch.", MsgBoxStyle.Critical, "Critical Error")
-                    Process.Start(url) 'Link to download page
-                    End
-                End If
-            End While
-            My.Settings.Item(path) = fbdDir.SelectedPath
-            fbdDir.Dispose()
-            My.Settings.Save()
-        End If
+    Private Sub getAuthToken()
+        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", My.Settings.sAKeyPath)
+        runCmd("gcloud auth application-default print-access-token > """ & AppDomain.CurrentDomain.BaseDirectory & "authkey.txt""")
+        authToken = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
+        IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
     End Sub
-
-    'Authentication key is not used for long recognise
-    'Private Sub getAuthKey()
-    '    If ofdSelect.ShowDialog() = DialogResult.OK Then
-    '        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", ofdSelect.FileName)
-    '        runCmd("gcloud auth application-default print-access-token > " & AppDomain.CurrentDomain.BaseDirectory & "authkey.txt") 'MP3 to FLAC conversion
-    '        My.Settings.authToken = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
-    '        IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
-    '        ofdSelect.Dispose()
-    '    End If
-    'End Sub
-
-    Private Function runCmd(command As String, Optional ByVal waitForExit As Boolean = True, Optional ByVal hidden As Boolean = False)
-        Dim cmd As New Process
-        With cmd
-            .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit"))
-            If hidden = True Then
-                .StartInfo.WindowStyle = ProcessWindowStyle.Hidden
-            End If
-            .Start()
-            If waitForExit = True Then
-                .WaitForExit()
-            End If
-        End With
-        Return cmd
-    End Function
 
     Private Sub poll()
         flpOperations.Controls.Clear()
@@ -141,7 +217,7 @@ Public Class main
             Dim cmdPollDone As Boolean = False
 
             For Each op As String In My.Settings.operationsList 'Append list of polling processes 
-                cmdList.Add(runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt""", False, True))
+                cmdList.Add(runCmd(My.Settings.curlPath & "curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt""", False, True))
             Next
 
             While cmdPollDone = False
@@ -215,9 +291,13 @@ Public Class main
         End If
     End Sub
 
-
     Private Sub cleanScript(input As String)
         MsgBox("Please select a directory to save the transcript file.")
+        With sfdExport
+            .Filter = "Text file (.txt)|*.txt"
+            .OverwritePrompt = False
+            .FileName = "Output"
+        End With
         If sfdExport.ShowDialog() = DialogResult.OK Then
             Dim output As String = ""
             While input.Contains("transcript"": """) = True
@@ -231,6 +311,22 @@ Public Class main
         sfdExport.Dispose()
     End Sub
 
+    'Functions
+    Private Function runCmd(command As String, Optional ByVal waitForExit As Boolean = True, Optional ByVal hidden As Boolean = False)
+        Dim cmd As New Process
+        With cmd
+            .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "pause"))
+            If hidden = True Then
+                .StartInfo.WindowStyle = ProcessWindowStyle.Hidden
+            End If
+            .Start()
+            If waitForExit = True Then
+                .WaitForExit()
+            End If
+        End With
+        Return cmd
+    End Function
+
     Private Function checkErrors(input As String, clearCondition As String)
         Dim foundError As Boolean = True
         If input.Contains(clearCondition) Then
@@ -241,49 +337,7 @@ Public Class main
         Return foundError
     End Function
 
-    Private Sub btnTest_Click(sender As Object, e As EventArgs) Handles btnTest.Click
-        MsgBox("Nothing!")
-        'If ofdSelect.ShowDialog() = DialogResult.OK Then
-        '    Dim input As String = My.Computer.FileSystem.ReadAllText(ofdSelect.FileName)
-        '    MsgBox("Please select a directory to save the transcript file.")
-        '    If sfdExport.ShowDialog() = DialogResult.OK Then
-        '        Dim output As String = ""
-        '        While input.Contains("transcript"": """) = True
-        '            input = input.Remove(0, (input.IndexOf("transcript"": """) - 1)) 'Remove all preceding text before the first transcript chunk
-        '            output += ("Time: " & cirsfile.parseInString(input, "startTime"": """, "s") & vbNewLine) 'Take timestamp
-        '            output += (cirsfile.parseInString(input, "transcript"": """, """") & vbNewLine & vbNewLine) 'Take contents of chunk
-        '            input = input.Remove(0, (input.IndexOf("startTime"": """) - 1)) 'Remove all preceding text before the first timestamp
-        '        End While
-        '        cirsfile.write(output, sfdExport.FileName, True)
-        '    End If
-        '    sfdExport.Dispose()
-        'End If
-    End Sub
-
-    Private Sub btnGetTranscript_Click(sender As Object, e As EventArgs) Handles btnGetTranscript.Click
-        runCmd(My.Settings.curlPath & "\curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & My.Settings.apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
-
-        Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
-        If checkErrors(output, """progressPercent"": ") = False And output.Contains("progressPercent"": 100") Then
-            cleanScript(output)
-        End If
-    End Sub
-
-    Private Sub btnDeleteOp_Click(sender As Object, e As EventArgs) Handles btnDeleteOp.Click
-        If MsgBox("This will permanently remove the operation from the list. The transcript file will be UNRECOVERABLE. Are you sure you want to proceed?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Remove operation permanently?") = MsgBoxResult.Yes Then
-            Dim target As String = ""
-            For Each op As String In My.Settings.operationsList
-                If op.Contains(clickedID) Then
-                    target = op
-                End If
-            Next
-            btnGetTranscript.Enabled = False
-            My.Settings.operationsList.Remove(target)
-            My.Settings.Save()
-            poll()
-        End If
-    End Sub
-
+    'Handlers
     Private Sub panelClicked(sender As Object, e As EventArgs)
         Dim clicked As Panel = sender
         'Panel selection here

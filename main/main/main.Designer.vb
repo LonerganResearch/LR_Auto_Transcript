@@ -92,9 +92,6 @@ Partial Class main
         'sfdExport
         '
         Me.sfdExport.DefaultExt = "txt"
-        Me.sfdExport.FileName = "Output"
-        Me.sfdExport.Filter = "Text file|*.txt"
-        Me.sfdExport.OverwritePrompt = False
         '
         'btnGetTranscript
         '
