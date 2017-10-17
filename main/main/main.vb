@@ -1,19 +1,22 @@
 ﻿Imports CIRS_lib
 
 'To do
-'Check if authToken is empty
 'settings form?
 'input box on top
 'allow viewing and deletion of files in batch
 'remove jobs older than x days
 'loading bar
-'delete .flac and .json generated?
 'dependency unzipping
 'bucket selection
 'unique op names
-'stop from dling transcription without 100%
-'if no progress percent say please wait
 'Panel too short for ID
+'Check if connected/authtoken return
+'Error checking whenever a request is made
+'Is the percentage updating?
+'Get sample rate and modulate if outside bounds
+'Re-order getTranscript
+'Timeout for authToken getting
+
 
 
 Public Class main
@@ -26,38 +29,51 @@ Public Class main
 
     'Controls
     Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click 'Import mp3 file(s) for conversion to .flac and .json generation
-        ofdSelect.Filter = "MP3 files (.mp3)|*.mp3"
+        With ofdSelect
+            .Filter = "MP3 files (.mp3)|*.mp3"
+            .Multiselect = True
+        End With
         If ofdSelect.ShowDialog() = DialogResult.OK Then
-            getAuthToken()
-            For Each trackName As String In ofdSelect.FileNames
-                Dim flacTrack As String = IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac"
-                runCmd("ffmpeg -y -i """ & trackName & """ -ar " & sampleRate & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion
+            Dim i As Integer = 1
+            While authToken = "" And i < 3 'Retry getAuthToken 3 times
+                getAuthToken()
+                i += 1
+            End While
 
-                runCmd("curl -v --upload-file """ & flacTrack & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:audio/flac"" ""https://storage.googleapis.com/lr_test_transcript/" & IO.Path.GetFileName(flacTrack) & """") 'Upload file 
+            If authToken <> "" Then 'Check authentication token actually exists
+                For Each trackName As String In ofdSelect.FileNames
+                    Dim flacTrack As String = IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac"
+                    'runCmd("ffmpeg -y -i """ & trackName & """ -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion
+                    runCmd("ffmpeg -y -i """ & trackName & """ -ar " & sampleRate & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion forcing sampleRate
 
-                cirsfile.write(My.Resources.makePublic.ToString, AppDomain.CurrentDomain.BaseDirectory & "makePublic.json", False) 'Copy file from resources
-                runCmd("curl -X POST --data-binary @""" & AppDomain.CurrentDomain.BaseDirectory & "makePublic.json" & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:application/json"" ""https://www.googleapis.com/storage/v1/b/" & bucket & "/o/" & IO.Path.GetFileName(flacTrack) & "/acl""") 'Make file public
-                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "makePublic.json")
+                    runCmd("curl -v --upload-file """ & flacTrack & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:audio/flac"" ""https://storage.googleapis.com/lr_test_transcript/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & """") 'Upload file to bucket. Replace all spaces with %20 so curl doesn't throw parsing errors
+                    IO.File.Delete(flacTrack) 'Clean up flac file after upload
 
-                cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json", False) 'Write .json file in the same directory
+                    cirsfile.write(My.Resources.makePublic.ToString, AppDomain.CurrentDomain.BaseDirectory & "makePublic.json", False) 'Copy file from resources
+                    runCmd("curl -X POST --data-binary @""" & AppDomain.CurrentDomain.BaseDirectory & "makePublic.json" & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:application/json"" ""https://www.googleapis.com/storage/v1/b/" & bucket & "/o/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & "/acl""") 'Make file public
+                    IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "makePublic.json")
 
-                runCmd("curl -X POST -d @""" & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & apiKey & " --header ""Content-Type:application/json"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""") 'Post for transcription
+                    cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json", False) 'Write .json file in the same directory
+                    runCmd("curl -X POST -d @""" & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & apiKey & " --header ""Content-Type:application/json"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""") 'Post for transcription
+                    IO.File.Delete(IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json") 'Clean up .json file after posting
 
-                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
-                If checkErrors(output, """name"": """) = False Then
-                    Dim opName As String = InputBox("Please enter the name of the operation. This will default to " & IO.Path.GetFileNameWithoutExtension(trackName) & ".", "Enter operation name")
-                    If opName = "" Then
-                        opName = IO.Path.GetFileNameWithoutExtension(trackName)
+                    Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                    If checkErrors(output, """name"": """) = False Then
+                        Dim opName As String = InputBox("Please enter the name of the operation. This will default to " & IO.Path.GetFileNameWithoutExtension(trackName) & ".", "Enter operation name") 'New form for inputbox
+                        If opName = "" Then
+                            opName = IO.Path.GetFileNameWithoutExtension(trackName)
+                        End If
+                        My.Settings.operationsList.Add(cirsfile.parseInString(output, """name"": """, """") & "|" & opName) 'Retrieve the name of the operation and add it to the operations list and then appends it with |JOBNAME
+                        MsgBox("File(s) uploaded for transcription.", MsgBoxStyle.ApplicationModal, "Upload Complete")
                     End If
-                    My.Settings.operationsList.Add(cirsfile.parseInString(output, """name"": """, """") & "|" & opName) 'Retrieve the name of the operation and add it to the operations list and then appends it with |JOBNAME
-                    MsgBox("File(s) uploaded for transcription.", MsgBoxStyle.ApplicationModal, "Upload Complete")
-                End If
 
-                My.Settings.Save()
-                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
-            Next
-            poll()
-            ofdSelect.Dispose()
+                    My.Settings.Save()
+                    IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                Next
+                poll()
+                ofdSelect.Dispose()
+            End If
+
         End If
     End Sub
 
@@ -90,12 +106,17 @@ Public Class main
     End Sub
 
     Private Sub btnGetTranscript_Click(sender As Object, e As EventArgs) Handles btnGetTranscript.Click
-        runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
-
-        Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
-        If checkErrors(output, """progressPercent"": ") = False And output.Contains("progressPercent"": 100") Then
-            cleanScript(output)
-        End If
+        For Each panel As Panel In flpOperations.Controls
+            If panel.Name = clickedID And panel.Tag = "100" Then
+                runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
+                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
+                If checkErrors(output, """progressPercent"": ") = False And output.Contains("progressPercent"": 100") Then
+                    cleanScript(output)
+                End If
+            Else
+                MsgBox("Operation incomplete. Please re-poll and try again when the operation is done.", MsgBoxStyle.SystemModal, "Operation incomplete")
+            End If
+        Next
     End Sub
 
     Private Sub btnDeleteOp_Click(sender As Object, e As EventArgs) Handles btnDeleteOp.Click
@@ -208,9 +229,15 @@ Public Class main
     End Sub
 
     Private Sub getAuthToken()
+        authToken = ""
         Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", My.Settings.sAKeyPath)
         runCmd("gcloud auth application-default print-access-token > """ & AppDomain.CurrentDomain.BaseDirectory & "authkey.txt""")
-        authToken = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt").Substring(0, My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt").Length - 2) 'Remove the CR and LF characters at the end of the authToken
+        Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
+        If output.Contains("ERROR") Then
+            MsgBox("Error: " & cirsfile.parseInString(output, "(gcloud.auth.application-default.print-access-token) "), MsgBoxStyle.SystemModal, "Authentication token error")
+        Else
+            authToken = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt").Substring(0, My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt").Length - 2) 'Remove the CR and LF characters at the end of the authToken
+        End If
         IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
     End Sub
 
@@ -223,6 +250,7 @@ Public Class main
             btnPoll.Enabled = False
         Else
             btnPoll.Enabled = True
+
             Dim cmdList As New List(Of Process) 'List of polling processes
             Dim cmdPollDone As Boolean = False
 
@@ -250,41 +278,54 @@ Public Class main
                     If output.Contains("progressPercent"": 100") Then
                         panelColor = Color.Green
                     End If
+
+                    Dim opProgress As String = ""
+                    If output.Contains("progressPercent") Then
+                        If output.Contains("""progressPercent"": 100") Then
+                            opProgress = "Done"
+                        Else
+                            opProgress = cirsfile.parseInString(output, """progressPercent"": ", ",") & "%"
+                        End If
+                    Else
+                        opProgress = "Initialising"
+                    End If
+
                     Dim newpanel As New Panel With
-                        {
-                        .Margin = New Padding(3, 3, 3, 3),
-                        .Height = 55,
-                        .Width = 140,
-                        .BackColor = panelColor,
-                        .Name = cirsfile.parseInString(op, "", "|"),
-                        .Tag = cirsfile.parseInString(output, """progressPercent"": ", ",")
-                        }
+                    {
+                    .Margin = New Padding(3, 3, 3, 3),
+                    .Height = 55,
+                    .Width = 140,
+                    .BackColor = panelColor,
+                    .Name = cirsfile.parseInString(op, "", "|"),
+                    .Tag = cirsfile.parseInString(output, """progressPercent"": ", ",")
+                    }
+
                     Dim ID As New Label With
-                        {
-                        .Text = cirsfile.parseInString(op, "", "|"),
-                        .Font = New Font("Segoe UI", 9, FontStyle.Bold),
-                        .Height = 15,
-                        .Location = New Point(0, 0),
-                        .Name = cirsfile.parseInString(op, "", "|") & ".id"
-                        }
+                    {
+                    .Text = cirsfile.parseInString(op, "", "|"),
+                    .Font = New Font("Segoe UI", 9, FontStyle.Bold),
+                    .Height = 15,
+                    .Location = New Point(0, 0),
+                    .Name = cirsfile.parseInString(op, "", "|") & ".id"
+                    }
 
                     Dim name As New Label With
-                        {
-                        .Text = cirsfile.parseInString(op, "|"),
-                        .Font = New Font("Segoe UI", 8),
-                        .Height = 13,
-                        .Location = New Point(0, 15),
-                        .Name = cirsfile.parseInString(op, "", "|") + ".name"
-                        }
+                    {
+                    .Text = cirsfile.parseInString(op, "|"),
+                    .Font = New Font("Segoe UI", 8),
+                    .Height = 13,
+                    .Location = New Point(0, 15),
+                    .Name = cirsfile.parseInString(op, "", "|") + ".name"
+                    }
 
                     Dim progress As New Label With
-                        {
-                        .Text = cirsfile.parseInString(output, """progressPercent"": ", ",") & "%", 'Get percentage
-                        .Font = New Font("Segoe UI", 8),
-                        .Height = 13,
-                        .Location = New Point(0, 28),
-                        .Name = cirsfile.parseInString(op, "", "|") + ".progress"
-                        }
+                    {
+                    .Text = opProgress,
+                    .Font = New Font("Segoe UI", 8),
+                    .Height = 13,
+                    .Location = New Point(0, 28),
+                    .Name = cirsfile.parseInString(op, "", "|") + ".progress"
+                    }
 
                     newpanel.Controls.Add(ID)
                     newpanel.Controls.Add(name)
@@ -296,7 +337,7 @@ Public Class main
                     AddHandler name.MouseClick, AddressOf labelClicked
                     AddHandler progress.MouseClick, AddressOf labelClicked
                 End If
-                'IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt")
+                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt")
             Next
         End If
     End Sub
@@ -350,7 +391,6 @@ Public Class main
     'Handlers
     Private Sub panelClicked(sender As Object, e As EventArgs)
         Dim clicked As Panel = sender
-        'Panel selection here
         For Each panel As Panel In flpOperations.Controls
             If panel.Tag = "100" Then
                 panel.BackColor = Color.Green
