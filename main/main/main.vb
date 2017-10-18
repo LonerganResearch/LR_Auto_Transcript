@@ -77,6 +77,8 @@ Public Class main
                 Next
                 poll()
                 ofdSelect.Dispose()
+            Else
+                MsgBox("Error retrieving authentication token. Check that you have selected the right Service Account Key file and are connected to the internet.", MsgBoxStyle.SystemModal, "Error retrieving authentication token")
             End If
 
         End If
@@ -112,15 +114,16 @@ Public Class main
 
     Private Sub btnGetTranscript_Click(sender As Object, e As EventArgs) Handles btnGetTranscript.Click
         For Each panel As Panel In flpOperations.Controls
-            If panel.Name = clickedID And panel.Tag = "100" Then
-                Dim output As String = runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & apiKey)(0) 'Retrieve results of the operation
-
-                If checkErrors(output, """progressPercent"": ") = False And output.Contains("progressPercent"": 100") Then
+            If panel.Name = clickedID And panel.Tag = "Done" Then
+                runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""") 'Retrieve results of the operation
+                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+                If checkErrors(output, """progressPercent"": ") = False Then
                     cleanScript(output)
                 End If
             Else
                 MsgBox("Operation incomplete. Please re-poll and try again when the operation is done.", MsgBoxStyle.SystemModal, "Operation incomplete")
             End If
+            IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
         Next
     End Sub
 
@@ -373,17 +376,18 @@ Public Class main
         Dim cmd As New Process
         With cmd
             .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit"))
-            .StartInfo.UseShellExecute = False
-            .StartInfo.RedirectStandardInput = True
-            .StartInfo.RedirectStandardOutput = True
             If hidden = True Then
                 .StartInfo.WindowStyle = ProcessWindowStyle.Hidden
             End If
+            .StartInfo.UseShellExecute = False
+            .StartInfo.RedirectStandardInput = True
+            .StartInfo.RedirectStandardOutput = True
             .Start()
             If waitForExit = True Then
                 .WaitForExit()
             End If
         End With
+
         Return {cmd.StandardOutput.ReadToEnd, cmd}
     End Function
 
@@ -400,7 +404,6 @@ Public Class main
     Private Function sampleRateOutsideBounds(track As String)
         Dim outsideBounds As Boolean = False
         Dim output As String = cirsfile.parseInString(runCmd("ffprobe -v error -show_format -show_streams """ & track & """")(0), "sample_rate=", vbCr)
-        MsgBox(output)
         If CInt(output) < 8000 Or CInt(output) > 44100 Then
             outsideBounds = True
         End If
