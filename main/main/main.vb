@@ -10,7 +10,7 @@
 'allow viewing and deletion of files in batch
 'remove jobs older than x days
 
-
+'multi file input
 'bucket selection
 'unique op names
 'Panel too short for ID
@@ -303,7 +303,7 @@ Public Class main
                     {
                     .Margin = New Padding(3, 3, 3, 3),
                     .Height = 55,
-                    .Width = 140,
+                    .Width = 190,
                     .BackColor = panelColor,
                     .Name = op.id,
                     .Tag = op.progress
@@ -377,13 +377,16 @@ Public Class main
         With cmd
             .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit"))
             If hidden = True Then
-                .StartInfo.WindowStyle = ProcessWindowStyle.Hidden
+                .StartInfo.CreateNoWindow = True
             End If
             .StartInfo.UseShellExecute = False
+
             .StartInfo.RedirectStandardInput = True
+
             .StartInfo.RedirectStandardOutput = True
+
             .Start()
-            If waitForExit = True Then
+                If waitForExit = True Then
                 .WaitForExit()
             End If
         End With
