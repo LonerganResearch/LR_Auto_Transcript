@@ -3,6 +3,14 @@
     Public apiKey As String = "AIzaSyCwp5oY4JiLi36scDCTJizQ0PDCC1R3rTg"
     Public authToken As String = ""
     Public bucket As String = "lr_test_transcript"
+
+    Public Class operation
+        Property name As String
+        Property id As String
+        Property progress As String
+        Property output As String
+        Property process As Process
+    End Class
     'Some defaults can be modified here. ffmpeg will force encoding and sample rate. The rest should be changed in resources\template.json.
     'Encoding is typically FLAC
     'If uri done manually, replace https://storage.googleapis.com/ with gs://

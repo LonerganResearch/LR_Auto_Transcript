@@ -61,10 +61,9 @@ Public Class main
                     IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "makePublic.json")
 
                     cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json", False) 'Write .json file in the same directory
-                    runCmd("curl -X POST -d @""" & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & apiKey & " --header ""Content-Type:application/json"" > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""") 'Post for transcription
+                    Dim output As String = runCmd("curl -X POST -d @""" & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & apiKey & " --header ""Content-Type:application/json""")(0) 'Post for transcription
                     IO.File.Delete(IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json") 'Clean up .json file after posting
 
-                    Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
                     If checkErrors(output, """name"": """) = False Then
                         Dim opName As String = InputBox("Please enter the name of the operation. This will default to " & IO.Path.GetFileNameWithoutExtension(trackName) & ".", "Enter operation name") 'New form for inputbox
                         If opName = "" Then
@@ -75,7 +74,6 @@ Public Class main
                     End If
 
                     My.Settings.Save()
-                    IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
                 Next
                 poll()
                 ofdSelect.Dispose()
@@ -115,8 +113,8 @@ Public Class main
     Private Sub btnGetTranscript_Click(sender As Object, e As EventArgs) Handles btnGetTranscript.Click
         For Each panel As Panel In flpOperations.Controls
             If panel.Name = clickedID And panel.Tag = "100" Then
-                runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""")
-                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt") 'Retrieve results of the operation
+                Dim output As String = runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & apiKey)(0) 'Retrieve results of the operation
+
                 If checkErrors(output, """progressPercent"": ") = False And output.Contains("progressPercent"": 100") Then
                     cleanScript(output)
                 End If
@@ -237,14 +235,12 @@ Public Class main
     Private Sub getAuthToken()
         authToken = ""
         Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", My.Settings.sAKeyPath)
-        runCmd("gcloud auth application-default print-access-token > """ & AppDomain.CurrentDomain.BaseDirectory & "authkey.txt""")
-        Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
+        Dim output As String = runCmd("gcloud auth application-default print-access-token")(0)
         If output.Contains("ERROR") Then
             MsgBox("Error: " & cirsfile.parseInString(output, "(gcloud.auth.application-default.print-access-token) "), MsgBoxStyle.SystemModal, "Authentication token error")
         Else
-            authToken = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt").Substring(0, My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt").Length - 2) 'Remove the CR and LF characters at the end of the authToken
+            authToken = output.Substring(0, output.Length - 2) 'Remove the CR and LF characters at the end of the authToken
         End If
-        IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "authkey.txt")
     End Sub
 
     Private Sub poll()
@@ -257,17 +253,33 @@ Public Class main
         Else
             btnPoll.Enabled = True
 
-            Dim cmdList As New List(Of Process) 'List of polling processes
+            Dim cmdList As New List(Of operation) 'List of polling processes
             Dim cmdPollDone As Boolean = False
 
-            For Each op As String In My.Settings.operationsList 'Append list of polling processes 
-                cmdList.Add(runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(op, "", "|") & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt""", False, True))
+            For Each opName As String In My.Settings.operationsList 'Append list of polling processes
+                Dim obj As Object = runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & cirsfile.parseInString(opName, "", "|") & "?key=" & apiKey, False, True)
+                Dim op As New operation With
+                    {
+                    .name = cirsfile.parseInString(opName, "|"),
+                    .id = cirsfile.parseInString(opName, "", "|"),
+                    .progress = "Initialising",
+                    .output = obj(0),
+                    .process = obj(1)
+                    }
+                If op.output.Contains("progressPercent") Then
+                    If op.output.Contains("""progressPercent"": 100") Then
+                        op.progress = "Done"
+                    Else
+                        op.progress = cirsfile.parseInString(op.output, """progressPercent"": ", ",") & "%"
+                    End If
+                End If
+                cmdList.Add(op)
             Next
 
             While cmdPollDone = False
                 Dim i = 0
-                For Each process As Process In cmdList
-                    If process.HasExited = True Then
+                For Each op As operation In cmdList
+                    If op.process.HasExited = True Then
                         i += 1
                     End If
                 Next
@@ -277,23 +289,11 @@ Public Class main
             End While
 
             'Filling panels
-            For Each op As String In My.Settings.operationsList 'Populate to list
-                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt") 'Retrieve results of the operation
-                If checkErrors(output, "name"": ") = False Then
+            For Each op As operation In cmdList 'Populate to list
+                If checkErrors(op.output, "name"": ") = False Then
                     Dim panelColor As Color = Color.DeepSkyBlue
-                    If output.Contains("progressPercent"": 100") Then
+                    If op.progress = "Done" Then
                         panelColor = Color.Green
-                    End If
-
-                    Dim opProgress As String = ""
-                    If output.Contains("progressPercent") Then
-                        If output.Contains("""progressPercent"": 100") Then
-                            opProgress = "Done"
-                        Else
-                            opProgress = cirsfile.parseInString(output, """progressPercent"": ", ",") & "%"
-                        End If
-                    Else
-                        opProgress = "Initialising"
                     End If
 
                     Dim newpanel As New Panel With
@@ -302,35 +302,35 @@ Public Class main
                     .Height = 55,
                     .Width = 140,
                     .BackColor = panelColor,
-                    .Name = cirsfile.parseInString(op, "", "|"),
-                    .Tag = cirsfile.parseInString(output, """progressPercent"": ", ",")
+                    .Name = op.id,
+                    .Tag = op.progress
                     }
 
                     Dim ID As New Label With
                     {
-                    .Text = cirsfile.parseInString(op, "", "|"),
+                    .Text = op.id,
                     .Font = New Font("Segoe UI", 9, FontStyle.Bold),
                     .Height = 15,
                     .Location = New Point(0, 0),
-                    .Name = cirsfile.parseInString(op, "", "|") & ".id"
+                    .Name = op.id & ".id"
                     }
 
                     Dim name As New Label With
                     {
-                    .Text = cirsfile.parseInString(op, "|"),
+                    .Text = op.name,
                     .Font = New Font("Segoe UI", 8),
                     .Height = 13,
                     .Location = New Point(0, 15),
-                    .Name = cirsfile.parseInString(op, "", "|") + ".name"
+                    .Name = op.id + ".name"
                     }
 
                     Dim progress As New Label With
                     {
-                    .Text = opProgress,
+                    .Text = op.progress,
                     .Font = New Font("Segoe UI", 8),
                     .Height = 13,
                     .Location = New Point(0, 28),
-                    .Name = cirsfile.parseInString(op, "", "|") + ".progress"
+                    .Name = op.id + ".progress"
                     }
 
                     newpanel.Controls.Add(ID)
@@ -343,7 +343,6 @@ Public Class main
                     AddHandler name.MouseClick, AddressOf labelClicked
                     AddHandler progress.MouseClick, AddressOf labelClicked
                 End If
-                IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & cirsfile.parseInString(op, "", "|") & ".txt")
             Next
         End If
     End Sub
@@ -400,7 +399,7 @@ Public Class main
 
     Private Function sampleRateOutsideBounds(track As String)
         Dim outsideBounds As Boolean = False
-        Dim output As String = cirsfile.parseInString(capCmd("ffprobe -v error -show_format -show_streams """ & track & """")(0), "sample_rate=", vbCr)
+        Dim output As String = cirsfile.parseInString(runCmd("ffprobe -v error -show_format -show_streams """ & track & """")(0), "sample_rate=", vbCr)
         MsgBox(output)
         If CInt(output) < 8000 Or CInt(output) > 44100 Then
             outsideBounds = True
@@ -412,7 +411,7 @@ Public Class main
     Private Sub panelClicked(sender As Object, e As EventArgs)
         Dim clicked As Panel = sender
         For Each panel As Panel In flpOperations.Controls
-            If panel.Tag = "100" Then
+            If panel.Tag = "Done" Then
                 panel.BackColor = Color.Green
             Else
                 panel.BackColor = Color.DeepSkyBlue

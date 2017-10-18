@@ -137,7 +137,7 @@ Partial Class main
         Me.MaximizeBox = False
         Me.Name = "main"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
-        Me.Text = "Automatic Transcript v1.1"
+        Me.Text = "Automatic Transcript v1.2"
         Me.ResumeLayout(False)
 
     End Sub
