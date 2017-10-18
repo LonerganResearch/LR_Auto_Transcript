@@ -62,6 +62,12 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="loadingScreen.Designer.vb">
+      <DependentUpon>loadingScreen.vb</DependentUpon>
+    </Compile>
+    <Compile Include="loadingScreen.vb">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="main.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -87,6 +93,9 @@
     <Compile Include="variables.vb" />
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="loadingScreen.resx">
+      <DependentUpon>loadingScreen.vb</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="main.resx">
       <DependentUpon>main.vb</DependentUpon>
     </EmbeddedResource>

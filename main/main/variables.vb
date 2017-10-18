@@ -1,6 +1,5 @@
 ﻿Module variables 'Fix this up to let the user change stuff
     Public cirsfile As New CIRS_lib.file 'Import library
-    Public sampleRate As Integer = 44100 'Used in the ffmpeg conversion
     Public apiKey As String = "AIzaSyCwp5oY4JiLi36scDCTJizQ0PDCC1R3rTg"
     Public authToken As String = ""
     Public bucket As String = "lr_test_transcript"
@@ -9,6 +8,9 @@
     'If uri done manually, replace https://storage.googleapis.com/ with gs://
 End Module
 
+'Get file sample rate
+'ffprobe -v error -show_format -show_streams test.mp3 > hi.txt
+'
 'Post .json for transcription
 'curl -X POST -d @"test.json" https://speech.googleapis.com/v1/speech:longrunningrecognize?key=AIzaSyCwp5oY4JiLi36scDCTJizQ0PDCC1R3rTg --header "Content-Type:application/json" > output.txt
 '

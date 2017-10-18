@@ -1,20 +1,23 @@
 ﻿Imports CIRS_lib
 
 'To do
+'High Priority
+'loading bar
+'dependency unzipping
+
 'settings form?
 'input box on top
 'allow viewing and deletion of files in batch
 'remove jobs older than x days
-'loading bar
-'dependency unzipping
+
+
 'bucket selection
 'unique op names
 'Panel too short for ID
 'Check if connected/authtoken return
 'Error checking whenever a request is made
 'Is the percentage updating?
-'Get sample rate and modulate if outside bounds
-'Re-order getTranscript
+
 'Timeout for authToken getting
 
 
@@ -43,11 +46,15 @@ Public Class main
             If authToken <> "" Then 'Check authentication token actually exists
                 For Each trackName As String In ofdSelect.FileNames
                     Dim flacTrack As String = IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac"
-                    'runCmd("ffmpeg -y -i """ & trackName & """ -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion
-                    runCmd("ffmpeg -y -i """ & trackName & """ -ar " & sampleRate & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion forcing sampleRate
+
+                    Dim resample As String = ""
+                    If sampleRateOutsideBounds(trackName) = True Then
+                        resample = " -ar 16000"
+                    End If
+                    runCmd("ffmpeg -y -i """ & trackName & """" & resample & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion forcing resampling if necessary
 
                     runCmd("curl -v --upload-file """ & flacTrack & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:audio/flac"" ""https://storage.googleapis.com/lr_test_transcript/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & """") 'Upload file to bucket. Replace all spaces with %20 so curl doesn't throw parsing errors
-                    IO.File.Delete(flacTrack) 'Clean up flac file after upload
+                    'IO.File.Delete(flacTrack) 'Clean up flac file after upload
 
                     cirsfile.write(My.Resources.makePublic.ToString, AppDomain.CurrentDomain.BaseDirectory & "makePublic.json", False) 'Copy file from resources
                     runCmd("curl -X POST --data-binary @""" & AppDomain.CurrentDomain.BaseDirectory & "makePublic.json" & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:application/json"" ""https://www.googleapis.com/storage/v1/b/" & bucket & "/o/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & "/acl""") 'Make file public
@@ -167,7 +174,6 @@ Public Class main
             If ofdSelect.ShowDialog() = DialogResult.OK Then
                 My.Settings.sAKeyPath = ofdSelect.FileName
                 runCmd("gcloud auth activate-service-account --key-file=""" & My.Settings.sAKeyPath & """") 'Activate service account key with gcloud (first run thing)
-                getAuthToken()
             End If
             ofdSelect.Dispose()
         End If
@@ -363,10 +369,14 @@ Public Class main
     End Sub
 
     'Functions
-    Private Function runCmd(command As String, Optional ByVal waitForExit As Boolean = True, Optional ByVal hidden As Boolean = False)
+    Private Function runCmd(command As String, Optional ByVal waitForExit As Boolean = True, Optional ByVal hidden As Boolean = False) As Object
+        Dim output As String = ""
         Dim cmd As New Process
         With cmd
             .StartInfo = New ProcessStartInfo("cmd", String.Format("/k {0} & {1}", command, "exit"))
+            .StartInfo.UseShellExecute = False
+            .StartInfo.RedirectStandardInput = True
+            .StartInfo.RedirectStandardOutput = True
             If hidden = True Then
                 .StartInfo.WindowStyle = ProcessWindowStyle.Hidden
             End If
@@ -375,7 +385,7 @@ Public Class main
                 .WaitForExit()
             End If
         End With
-        Return cmd
+        Return {cmd.StandardOutput.ReadToEnd, cmd}
     End Function
 
     Private Function checkErrors(input As String, clearCondition As String)
@@ -386,6 +396,16 @@ Public Class main
             MsgBox("Error code " & cirsfile.parseInString(input, "code"": ", ",") & ": " & cirsfile.parseInString(input, "message"": """, """"), MsgBoxStyle.SystemModal, "Error " & cirsfile.parseInString(input, "code"": ", ","))
         End If
         Return foundError
+    End Function
+
+    Private Function sampleRateOutsideBounds(track As String)
+        Dim outsideBounds As Boolean = False
+        Dim output As String = cirsfile.parseInString(capCmd("ffprobe -v error -show_format -show_streams """ & track & """")(0), "sample_rate=", vbCr)
+        MsgBox(output)
+        If CInt(output) < 8000 Or CInt(output) > 44100 Then
+            outsideBounds = True
+        End If
+        Return outsideBounds
     End Function
 
     'Handlers
