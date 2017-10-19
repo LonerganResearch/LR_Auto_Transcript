@@ -2,14 +2,16 @@
 
 'To do
 'High Priority
+'Sample rate changing
 'loading bar
 'dependency unzipping
+'limit concurrent files
 
 'settings form?
 'input box on top
 'allow viewing and deletion of files in batch
 'remove jobs older than x days
-
+'delete file after use
 'multi file input
 'bucket selection
 'unique op names
@@ -44,43 +46,53 @@ Public Class main
             End While
 
             If authToken <> "" Then 'Check authentication token actually exists
+                Dim threadList As New List(Of Threading.Thread)
+
                 For Each trackName As String In ofdSelect.FileNames
-                    Dim flacTrack As String = IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac"
-
-                    Dim resample As String = ""
-                    If sampleRateOutsideBounds(trackName) = True Then
-                        resample = " -ar 16000"
-                    End If
-                    runCmd("ffmpeg -y -i """ & trackName & """" & resample & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion forcing resampling if necessary
-
-                    runCmd("curl -v --upload-file """ & flacTrack & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:audio/flac"" ""https://storage.googleapis.com/lr_test_transcript/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & """") 'Upload file to bucket. Replace all spaces with %20 so curl doesn't throw parsing errors
-                    'IO.File.Delete(flacTrack) 'Clean up flac file after upload
-
-                    cirsfile.write(My.Resources.makePublic.ToString, AppDomain.CurrentDomain.BaseDirectory & "makePublic.json", False) 'Copy file from resources
-                    runCmd("curl -X POST --data-binary @""" & AppDomain.CurrentDomain.BaseDirectory & "makePublic.json" & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:application/json"" ""https://www.googleapis.com/storage/v1/b/" & bucket & "/o/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & "/acl""") 'Make file public
-                    IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "makePublic.json")
-
-                    cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(trackName) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json", False) 'Write .json file in the same directory
-                    Dim output As String = runCmd("curl -X POST -d @""" & IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & apiKey & " --header ""Content-Type:application/json""")(0) 'Post for transcription
-                    IO.File.Delete(IO.Path.GetDirectoryName(trackName) & "\" & IO.Path.GetFileNameWithoutExtension(trackName) & ".json") 'Clean up .json file after posting
-
-                    If checkErrors(output, """name"": """) = False Then
-                        Dim opName As String = InputBox("Please enter the name of the operation. This will default to " & IO.Path.GetFileNameWithoutExtension(trackName) & ".", "Enter operation name") 'New form for inputbox
-                        If opName = "" Then
-                            opName = IO.Path.GetFileNameWithoutExtension(trackName)
-                        End If
-                        My.Settings.operationsList.Add(cirsfile.parseInString(output, """name"": """, """") & "|" & opName) 'Retrieve the name of the operation and add it to the operations list and then appends it with |JOBNAME
-                        MsgBox("File(s) uploaded for transcription.", MsgBoxStyle.ApplicationModal, "Upload Complete")
-                    End If
-
-                    My.Settings.Save()
+                    Dim thread As New System.Threading.Thread(AddressOf runOp)
+                    thread.Start(trackName)
+                    threadList.Add(thread)
                 Next
+
+                For Each t In threadList
+                    t.Join()
+                Next
+
+                My.Settings.Save()
                 poll()
                 ofdSelect.Dispose()
             Else
                 MsgBox("Error retrieving authentication token. Check that you have selected the right Service Account Key file and are connected to the internet.", MsgBoxStyle.SystemModal, "Error retrieving authentication token")
             End If
 
+        End If
+    End Sub
+
+    Private Sub runOp(input As String)
+        Dim flacTrack As String = IO.Path.GetDirectoryName(input) & "\" & IO.Path.GetFileNameWithoutExtension(input) & ".flac"
+
+        Dim resample As String = ""
+        If sampleRateOutsideBounds(input) = True Then
+            resample = " -ar 16000"
+        End If
+        runCmd("ffmpeg -y -i """ & input & """" & resample & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion forcing resampling if necessary
+
+        runCmd("curl -v --upload-file """ & flacTrack & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:audio/flac"" ""https://storage.googleapis.com/lr_test_transcript/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & """") 'Upload file to bucket. Replace all spaces with %20 so curl doesn't throw parsing errors
+        IO.File.Delete(flacTrack) 'Clean up flac file after upload
+
+        runCmd("curl -X POST --data-binary @""" & AppDomain.CurrentDomain.BaseDirectory & "\Resources\makePublic.json" & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:application/json"" ""https://www.googleapis.com/storage/v1/b/" & bucket & "/o/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & "/acl""") 'Make file public
+
+        cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(input) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(input) & "\" & IO.Path.GetFileNameWithoutExtension(input) & ".json", False) 'Write .json file in the same directory
+        Dim output As String = runCmd("curl -X POST -d @""" & IO.Path.GetDirectoryName(input) & "\" & IO.Path.GetFileNameWithoutExtension(input) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & apiKey & " --header ""Content-Type:application/json""")(0) 'Post for transcription
+        IO.File.Delete(IO.Path.GetDirectoryName(input) & "\" & IO.Path.GetFileNameWithoutExtension(input) & ".json") 'Clean up .json file after posting
+
+        If checkErrors(output, """name"": """) = False Then
+            Dim opName As String = InputBox("Please enter the name of the operation. This will default to " & IO.Path.GetFileNameWithoutExtension(input) & ".", "Enter operation name") 'New form for inputbox
+            If opName = "" Then
+                opName = IO.Path.GetFileNameWithoutExtension(input)
+            End If
+            My.Settings.operationsList.Add(cirsfile.parseInString(output, """name"": """, """") & "|" & opName) 'Retrieve the name of the operation and add it to the operations list and then appends it with |JOBNAME
+            MsgBox("File(s) uploaded for transcription.", MsgBoxStyle.ApplicationModal, "Upload Complete")
         End If
     End Sub
 
