@@ -13,6 +13,8 @@
 'remove jobs older than x days
 'delete file after use
 
+'panel with download and delete
+
 'Error checking whenever a request is made
 
 'Low priority
@@ -22,8 +24,6 @@
 
 
 Public Class main
-    Dim clickedID As String = ""
-
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         System.Windows.Forms.Form.CheckForIllegalCrossThreadCalls = False
         initialise()
@@ -44,8 +44,9 @@ Public Class main
             End While
 
             If authToken <> "" Then 'Check authentication token actually exists
-                runningTasks = True
+                'runningTasks = True
                 'loadingScreen.Show()
+                lblProcess.Text = "Uploading file(s) for transcription..."
                 Dim threadList As New List(Of Threading.Thread)
 
                 For Each trackName As String In ofdSelect.FileNames
@@ -57,9 +58,10 @@ Public Class main
                 For Each t In threadList
                     t.Join()
                 Next
-                runningTasks = False
+                'runningTasks = False
                 'loadingScreen.Close()
                 My.Settings.Save()
+                lblProcess.Text = "Ready"
                 MsgBox("Operation(s) finished.", MsgBoxStyle.ApplicationModal, "Operation(s) finished")
                 poll()
                 ofdSelect.Dispose()
@@ -107,15 +109,7 @@ Public Class main
         poll()
     End Sub
 
-    Private Sub btnReset_Click(sender As Object, e As EventArgs) Handles btnReset.Click
-        If MsgBox("Are you sure you want to clear all program settings and respecify dependencies?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Clear Application Settings?") = MsgBoxResult.Yes Then
-            My.Settings.Reset()
-            Environment.SetEnvironmentVariable("PATH", My.Settings.varPath)
-            initialise()
-        End If
-    End Sub
-
-    Private Sub btnTest_Click(sender As Object, e As EventArgs) Handles btnTest.Click
+    Private Sub btnTest_Click(sender As Object, e As EventArgs)
         For Each s In My.Settings.operationsList
             MsgBox(s)
         Next
@@ -128,40 +122,6 @@ Public Class main
         '    End If
         'End If
         'End If
-    End Sub
-
-    Private Sub btnGetTranscript_Click(sender As Object, e As EventArgs) Handles btnGetTranscript.Click
-        For Each panel As Panel In flpOperations.Controls
-            If panel.Name = clickedID And panel.Tag = "Done" Then
-                runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""") 'Retrieve results of the operation
-                Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
-                If checkErrors(output, """progressPercent"": ") = False Then
-                    Dim exportName As String = ""
-                    For Each op As String In My.Settings.operationsList
-                        If op.Contains(clickedID) Then
-                            exportName = cirsfile.parseInString(op, "|")
-                        End If
-                    Next
-                    cleanScript(output, exportName)
-                End If
-            End If
-            IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
-        Next
-    End Sub
-
-    Private Sub btnDeleteOp_Click(sender As Object, e As EventArgs) Handles btnDeleteOp.Click
-        If MsgBox("This will permanently remove the operation from the list. The transcript file will be UNRECOVERABLE. Are you sure you want to proceed?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Remove operation permanently?") = MsgBoxResult.Yes Then
-            Dim target As String = ""
-            For Each op As String In My.Settings.operationsList
-                If op.Contains(clickedID) Then
-                    target = op
-                End If
-            Next
-            btnGetTranscript.Enabled = False
-            My.Settings.operationsList.Remove(target)
-            My.Settings.Save()
-            poll()
-        End If
     End Sub
 
     'Subs
@@ -269,13 +229,12 @@ Public Class main
     End Sub
 
     Private Sub poll()
-        flpOperations.Controls.Clear()
         If My.Settings.operationsList.Count = 0 Then
             MsgBox("There are no current operations on file", MsgBoxStyle.Information, "No operations found")
-            btnGetTranscript.Enabled = False
-            btnDeleteOp.Enabled = False
             btnPoll.Enabled = False
+            flpOperations.Controls.Clear()
         Else
+            lblProcess.Text = "Polling operations..."
             btnPoll.Enabled = True
 
             btnPoll.Enabled = True
@@ -315,64 +274,92 @@ Public Class main
                 End If
             End While
 
+            flpOperations.Controls.Clear()
             'Filling panels
             For Each op As operation In cmdList 'Populate to list
                 If checkErrors(op.output, "name"": ") = False Then
-                    Dim panelColor As Color = Color.DeepSkyBlue
+                    Dim getEnabled As Boolean = False
+                    Dim textColor As Color = Color.DeepSkyBlue
                     If op.progress = "Done" Then
-                        panelColor = Color.Green
+                        textColor = Color.Green
+                        getEnabled = True
                     End If
 
                     Dim newpanel As New Panel With
-                    {
-                    .Margin = New Padding(3, 3, 3, 3),
-                    .Height = 55,
-                    .Width = 300,
-                    .BackColor = panelColor,
-                    .Name = op.id,
-                    .Tag = op.progress
-                    }
+                        {
+                        .Margin = New Padding(3, 3, 3, 3),
+                        .Height = 50,
+                        .Width = 340,
+                        .BackColor = Color.LightGray,
+                        .Name = op.id,
+                        .Tag = op.progress
+                        }
 
                     Dim ID As New Label With
-                    {
-                    .Text = op.id,
-                    .Font = New Font("Segoe UI", 9, FontStyle.Bold),
-                    .Height = 15,
-                    .Width = 300,
-                    .Location = New Point(0, 0),
-                    .Name = op.id & ".id"
-                    }
+                        {
+                        .Text = op.id,
+                        .Font = New Font("Segoe UI", 9, FontStyle.Bold),
+                        .Height = 15,
+                        .Width = 250,
+                        .Location = New Point(0, 0),
+                        .Name = op.id & ".id"
+                        }
 
                     Dim name As New Label With
-                    {
-                    .Text = op.name,
-                    .Font = New Font("Segoe UI", 8),
-                    .Height = 13,
-                    .Width = 300,
-                    .Location = New Point(0, 15),
-                    .Name = op.id + ".name"
-                    }
+                        {
+                        .Text = op.name,
+                        .Font = New Font("Segoe UI", 8),
+                        .Height = 13,
+                        .Width = 250,
+                        .Location = New Point(0, 15),
+                        .Name = op.id + ".name"
+                        }
 
                     Dim progress As New Label With
-                    {
-                    .Text = op.progress,
-                    .Font = New Font("Segoe UI", 8),
-                    .Height = 13,
-                    .Location = New Point(0, 28),
-                    .Name = op.id + ".progress"
-                    }
+                        {
+                        .Text = op.progress,
+                        .Font = New Font("Segoe UI", 8),
+                        .Height = 13,
+                        .ForeColor = textColor,
+                        .Location = New Point(0, 28),
+                        .Name = op.id + ".progress"
+                        }
+
+                    Dim btnGet As New Button With
+                        {
+                        .Tag = op.id,
+                        .Height = 40,
+                        .Width = 40,
+                        .BackColor = Color.LightSkyBlue,
+                        .BackgroundImage = My.Resources.save,
+                        .BackgroundImageLayout = ImageLayout.Stretch,
+                        .Location = New Point(255, 5),
+                        .Enabled = getEnabled
+                        }
+
+                    Dim btnDel As New Button With
+                        {
+                        .Tag = op.id,
+                        .Height = 40,
+                        .Width = 40,
+                        .BackColor = Color.IndianRed,
+                        .BackgroundImage = My.Resources.delete,
+                        .BackgroundImageLayout = ImageLayout.Stretch,
+                        .Location = New Point(295, 5)
+                        }
 
                     newpanel.Controls.Add(ID)
                     newpanel.Controls.Add(name)
                     newpanel.Controls.Add(progress)
+                    newpanel.Controls.Add(btnGet)
+                    newpanel.Controls.Add(btnDel)
 
                     flpOperations.Controls.Add(newpanel)
-                    AddHandler newpanel.MouseClick, AddressOf panelClicked
-                    AddHandler ID.MouseClick, AddressOf labelClicked
-                    AddHandler name.MouseClick, AddressOf labelClicked
-                    AddHandler progress.MouseClick, AddressOf labelClicked
+                    AddHandler btnGet.MouseClick, AddressOf btnGetClicked
+                    AddHandler btnDel.MouseClick, AddressOf btnDelClicked
                 End If
             Next
+            lblProcess.Text = "Ready"
         End If
     End Sub
 
@@ -406,11 +393,8 @@ Public Class main
                 .StartInfo.CreateNoWindow = True
             End If
             .StartInfo.UseShellExecute = False
-
             .StartInfo.RedirectStandardInput = True
-
             .StartInfo.RedirectStandardOutput = True
-
             .Start()
             If waitForExit = True Then
                 .WaitForExit()
@@ -440,26 +424,43 @@ Public Class main
     End Function
 
     'Handlers
-    Private Sub panelClicked(sender As Object, e As EventArgs)
-        Dim clicked As Panel = sender
-        For Each panel As Panel In flpOperations.Controls
-            If panel.Tag = "Done" Then
-                panel.BackColor = Color.Green
 
-            Else
-                panel.BackColor = Color.DeepSkyBlue
-                btnGetTranscript.Enabled = False
-            End If
-        Next
-        If clicked.Tag = "Done" Then
-            btnGetTranscript.Enabled = True
+    Private Sub btnGetClicked(sender As Object, e As EventArgs)
+        Dim clicked As Button = sender
+        runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & clicked.Tag & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""") 'Retrieve results of the operation
+        Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
+        If checkErrors(output, """progressPercent"": ") = False Then
+            Dim exportName As String = ""
+            For Each op As String In My.Settings.operationsList
+                If op.Contains(clicked.Tag) Then
+                    exportName = cirsfile.parseInString(op, "|")
+                End If
+            Next
+            cleanScript(output, exportName)
         End If
-        clicked.BackColor = Color.Orange
-        btnDeleteOp.Enabled = True
-        clickedID = clicked.Name
+        IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
     End Sub
 
-    Private Sub labelClicked(sender As Object, e As EventArgs)
-        panelClicked(sender.Parent, e)
+    Private Sub btnDelClicked(sender As Object, e As EventArgs)
+        Dim clicked As Button = sender
+        If MsgBox("This will permanently remove this operation from the list. The transcript file will be UNRECOVERABLE. Are you sure you want to proceed?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Remove operation permanently?") = MsgBoxResult.Yes Then
+            Dim target As String = ""
+            For Each op As String In My.Settings.operationsList
+                If op.Contains(clicked.Tag) Then
+                    target = op
+                End If
+            Next
+            My.Settings.operationsList.Remove(target)
+            My.Settings.Save()
+            poll()
+        End If
+    End Sub
+
+    Private Sub btnSettings_Click(sender As Object, e As EventArgs) Handles btnSettings.Click
+        If MsgBox("Are you sure you want to clear all program settings and respecify dependencies?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Clear Application Settings?") = MsgBoxResult.Yes Then
+            My.Settings.Reset()
+            Environment.SetEnvironmentVariable("PATH", My.Settings.varPath)
+            initialise()
+        End If
     End Sub
 End Class

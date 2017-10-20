@@ -27,12 +27,10 @@ Partial Class main
         Me.fbdDir = New System.Windows.Forms.FolderBrowserDialog()
         Me.btnExit = New System.Windows.Forms.Button()
         Me.btnPoll = New System.Windows.Forms.Button()
-        Me.btnTest = New System.Windows.Forms.Button()
-        Me.btnReset = New System.Windows.Forms.Button()
         Me.sfdExport = New System.Windows.Forms.SaveFileDialog()
-        Me.btnGetTranscript = New System.Windows.Forms.Button()
-        Me.btnDeleteOp = New System.Windows.Forms.Button()
         Me.flpOperations = New System.Windows.Forms.FlowLayoutPanel()
+        Me.btnSettings = New System.Windows.Forms.Button()
+        Me.lblProcess = New System.Windows.Forms.Label()
         Me.SuspendLayout()
         '
         'btnImport
@@ -41,7 +39,7 @@ Partial Class main
         Me.btnImport.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
         Me.btnImport.Location = New System.Drawing.Point(12, 12)
         Me.btnImport.Name = "btnImport"
-        Me.btnImport.Size = New System.Drawing.Size(80, 80)
+        Me.btnImport.Size = New System.Drawing.Size(85, 85)
         Me.btnImport.TabIndex = 0
         Me.btnImport.UseVisualStyleBackColor = True
         '
@@ -55,11 +53,11 @@ Partial Class main
         '
         'btnExit
         '
-        Me.btnExit.BackgroundImage = Global.main.My.Resources.Resources._exit
+        Me.btnExit.BackgroundImage = Global.main.My.Resources.Resources.quit
         Me.btnExit.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
-        Me.btnExit.Location = New System.Drawing.Point(12, 184)
+        Me.btnExit.Location = New System.Drawing.Point(103, 103)
         Me.btnExit.Name = "btnExit"
-        Me.btnExit.Size = New System.Drawing.Size(80, 80)
+        Me.btnExit.Size = New System.Drawing.Size(85, 85)
         Me.btnExit.TabIndex = 2
         Me.btnExit.UseVisualStyleBackColor = True
         '
@@ -68,74 +66,51 @@ Partial Class main
         Me.btnPoll.BackgroundImage = Global.main.My.Resources.Resources.poll
         Me.btnPoll.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
         Me.btnPoll.Enabled = False
-        Me.btnPoll.Location = New System.Drawing.Point(12, 98)
+        Me.btnPoll.Location = New System.Drawing.Point(103, 12)
         Me.btnPoll.Name = "btnPoll"
-        Me.btnPoll.Size = New System.Drawing.Size(80, 80)
+        Me.btnPoll.Size = New System.Drawing.Size(85, 85)
         Me.btnPoll.TabIndex = 3
         Me.btnPoll.UseVisualStyleBackColor = True
-        '
-        'btnTest
-        '
-        Me.btnTest.Location = New System.Drawing.Point(429, 184)
-        Me.btnTest.Name = "btnTest"
-        Me.btnTest.Size = New System.Drawing.Size(80, 23)
-        Me.btnTest.TabIndex = 4
-        Me.btnTest.Text = "Test Button"
-        Me.btnTest.UseVisualStyleBackColor = True
-        '
-        'btnReset
-        '
-        Me.btnReset.Location = New System.Drawing.Point(429, 213)
-        Me.btnReset.Name = "btnReset"
-        Me.btnReset.Size = New System.Drawing.Size(80, 23)
-        Me.btnReset.TabIndex = 5
-        Me.btnReset.Text = "Reset Settings"
-        Me.btnReset.UseVisualStyleBackColor = True
         '
         'sfdExport
         '
         Me.sfdExport.DefaultExt = "txt"
         '
-        'btnGetTranscript
-        '
-        Me.btnGetTranscript.BackgroundImage = Global.main.My.Resources.Resources.download
-        Me.btnGetTranscript.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
-        Me.btnGetTranscript.Enabled = False
-        Me.btnGetTranscript.Location = New System.Drawing.Point(429, 12)
-        Me.btnGetTranscript.Name = "btnGetTranscript"
-        Me.btnGetTranscript.Size = New System.Drawing.Size(80, 80)
-        Me.btnGetTranscript.TabIndex = 7
-        Me.btnGetTranscript.UseVisualStyleBackColor = True
-        '
-        'btnDeleteOp
-        '
-        Me.btnDeleteOp.BackgroundImage = Global.main.My.Resources.Resources.delete
-        Me.btnDeleteOp.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
-        Me.btnDeleteOp.Enabled = False
-        Me.btnDeleteOp.Location = New System.Drawing.Point(429, 98)
-        Me.btnDeleteOp.Name = "btnDeleteOp"
-        Me.btnDeleteOp.Size = New System.Drawing.Size(80, 80)
-        Me.btnDeleteOp.TabIndex = 8
-        Me.btnDeleteOp.UseVisualStyleBackColor = True
-        '
         'flpOperations
         '
         Me.flpOperations.AutoScroll = True
-        Me.flpOperations.Location = New System.Drawing.Point(98, 12)
+        Me.flpOperations.Location = New System.Drawing.Point(194, 12)
         Me.flpOperations.Name = "flpOperations"
-        Me.flpOperations.Size = New System.Drawing.Size(325, 252)
+        Me.flpOperations.Size = New System.Drawing.Size(385, 166)
         Me.flpOperations.TabIndex = 9
+        '
+        'btnSettings
+        '
+        Me.btnSettings.BackgroundImage = Global.main.My.Resources.Resources.settings
+        Me.btnSettings.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.btnSettings.Location = New System.Drawing.Point(12, 103)
+        Me.btnSettings.Name = "btnSettings"
+        Me.btnSettings.Size = New System.Drawing.Size(85, 85)
+        Me.btnSettings.TabIndex = 10
+        Me.btnSettings.UseVisualStyleBackColor = True
+        '
+        'lblProcess
+        '
+        Me.lblProcess.AutoSize = True
+        Me.lblProcess.Location = New System.Drawing.Point(194, 181)
+        Me.lblProcess.Name = "lblProcess"
+        Me.lblProcess.Size = New System.Drawing.Size(38, 13)
+        Me.lblProcess.TabIndex = 11
+        Me.lblProcess.Text = "Ready"
         '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(517, 282)
-        Me.Controls.Add(Me.btnReset)
+        Me.ClientSize = New System.Drawing.Size(594, 199)
+        Me.Controls.Add(Me.lblProcess)
+        Me.Controls.Add(Me.btnSettings)
         Me.Controls.Add(Me.flpOperations)
-        Me.Controls.Add(Me.btnDeleteOp)
-        Me.Controls.Add(Me.btnGetTranscript)
-        Me.Controls.Add(Me.btnTest)
         Me.Controls.Add(Me.btnPoll)
         Me.Controls.Add(Me.btnExit)
         Me.Controls.Add(Me.btnImport)
@@ -145,6 +120,7 @@ Partial Class main
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
         Me.Text = "Automatic Transcript v1.3"
         Me.ResumeLayout(False)
+        Me.PerformLayout()
 
     End Sub
 
@@ -153,10 +129,8 @@ Partial Class main
     Friend WithEvents fbdDir As FolderBrowserDialog
     Friend WithEvents btnExit As Button
     Friend WithEvents btnPoll As Button
-    Friend WithEvents btnTest As Button
-    Friend WithEvents btnReset As Button
     Friend WithEvents sfdExport As SaveFileDialog
-    Friend WithEvents btnGetTranscript As Button
-    Friend WithEvents btnDeleteOp As Button
     Friend WithEvents flpOperations As FlowLayoutPanel
+    Friend WithEvents btnSettings As Button
+    Friend WithEvents lblProcess As Label
 End Class

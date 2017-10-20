@@ -14,7 +14,8 @@
         Property process As Process
     End Class
 
-    Public processText As Array = {"Converting to .flac...", "Uploading...", "Setting permissions...", "Posting for transcription...", "Done"}
+    Public processText As String = ""
+    '{"Converting to .flac...", "Uploading...", "Setting permissions...", "Posting for transcription...", "Done"}
     'Some defaults can be modified here. ffmpeg will force encoding and sample rate. The rest should be changed in resources\template.json.
     'Encoding is typically FLAC
     'If uri done manually, replace https://storage.googleapis.com/ with gs://

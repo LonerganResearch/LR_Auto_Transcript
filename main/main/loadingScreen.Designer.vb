@@ -23,40 +23,23 @@ Partial Class loadingScreen
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         Me.pgbCurrentTask = New System.Windows.Forms.ProgressBar()
-        Me.pgbTotalTasks = New System.Windows.Forms.ProgressBar()
-        Me.lblJobsLeft = New System.Windows.Forms.Label()
         Me.lblCurrentTask = New System.Windows.Forms.Label()
         Me.SuspendLayout()
         '
         'pgbCurrentTask
         '
-        Me.pgbCurrentTask.Location = New System.Drawing.Point(12, 82)
+        Me.pgbCurrentTask.Location = New System.Drawing.Point(12, 25)
         Me.pgbCurrentTask.Maximum = 4
         Me.pgbCurrentTask.Name = "pgbCurrentTask"
         Me.pgbCurrentTask.Size = New System.Drawing.Size(300, 23)
         Me.pgbCurrentTask.Step = 1
+        Me.pgbCurrentTask.Style = System.Windows.Forms.ProgressBarStyle.Marquee
         Me.pgbCurrentTask.TabIndex = 0
-        '
-        'pgbTotalTasks
-        '
-        Me.pgbTotalTasks.Location = New System.Drawing.Point(12, 25)
-        Me.pgbTotalTasks.Name = "pgbTotalTasks"
-        Me.pgbTotalTasks.Size = New System.Drawing.Size(300, 23)
-        Me.pgbTotalTasks.TabIndex = 1
-        '
-        'lblJobsLeft
-        '
-        Me.lblJobsLeft.AutoSize = True
-        Me.lblJobsLeft.Location = New System.Drawing.Point(12, 9)
-        Me.lblJobsLeft.Name = "lblJobsLeft"
-        Me.lblJobsLeft.Size = New System.Drawing.Size(32, 13)
-        Me.lblJobsLeft.TabIndex = 2
-        Me.lblJobsLeft.Text = "x of x"
         '
         'lblCurrentTask
         '
         Me.lblCurrentTask.AutoSize = True
-        Me.lblCurrentTask.Location = New System.Drawing.Point(12, 66)
+        Me.lblCurrentTask.Location = New System.Drawing.Point(12, 9)
         Me.lblCurrentTask.Name = "lblCurrentTask"
         Me.lblCurrentTask.Size = New System.Drawing.Size(64, 13)
         Me.lblCurrentTask.TabIndex = 3
@@ -66,20 +49,18 @@ Partial Class loadingScreen
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(324, 122)
+        Me.ClientSize = New System.Drawing.Size(324, 63)
         Me.Controls.Add(Me.lblCurrentTask)
-        Me.Controls.Add(Me.lblJobsLeft)
-        Me.Controls.Add(Me.pgbTotalTasks)
         Me.Controls.Add(Me.pgbCurrentTask)
         Me.Name = "loadingScreen"
+        Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent
         Me.Text = "Processing..."
+        Me.TopMost = True
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
     End Sub
 
     Friend WithEvents pgbCurrentTask As ProgressBar
-    Friend WithEvents pgbTotalTasks As ProgressBar
-    Friend WithEvents lblJobsLeft As Label
     Friend WithEvents lblCurrentTask As Label
 End Class
