@@ -37,11 +37,12 @@ Partial Class main
         '
         'btnImport
         '
+        Me.btnImport.BackgroundImage = Global.main.My.Resources.Resources.upload
+        Me.btnImport.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
         Me.btnImport.Location = New System.Drawing.Point(12, 12)
         Me.btnImport.Name = "btnImport"
-        Me.btnImport.Size = New System.Drawing.Size(162, 23)
+        Me.btnImport.Size = New System.Drawing.Size(80, 80)
         Me.btnImport.TabIndex = 0
-        Me.btnImport.Text = "Import Audio File(s)"
         Me.btnImport.UseVisualStyleBackColor = True
         '
         'ofdSelect
@@ -54,37 +55,39 @@ Partial Class main
         '
         'btnExit
         '
-        Me.btnExit.Location = New System.Drawing.Point(12, 174)
+        Me.btnExit.BackgroundImage = Global.main.My.Resources.Resources._exit
+        Me.btnExit.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
+        Me.btnExit.Location = New System.Drawing.Point(12, 184)
         Me.btnExit.Name = "btnExit"
-        Me.btnExit.Size = New System.Drawing.Size(89, 23)
+        Me.btnExit.Size = New System.Drawing.Size(80, 80)
         Me.btnExit.TabIndex = 2
-        Me.btnExit.Text = "Exit"
         Me.btnExit.UseVisualStyleBackColor = True
         '
         'btnPoll
         '
+        Me.btnPoll.BackgroundImage = Global.main.My.Resources.Resources.poll
+        Me.btnPoll.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
         Me.btnPoll.Enabled = False
-        Me.btnPoll.Location = New System.Drawing.Point(12, 41)
+        Me.btnPoll.Location = New System.Drawing.Point(12, 98)
         Me.btnPoll.Name = "btnPoll"
-        Me.btnPoll.Size = New System.Drawing.Size(162, 23)
+        Me.btnPoll.Size = New System.Drawing.Size(80, 80)
         Me.btnPoll.TabIndex = 3
-        Me.btnPoll.Text = "Poll Operations"
         Me.btnPoll.UseVisualStyleBackColor = True
         '
         'btnTest
         '
-        Me.btnTest.Location = New System.Drawing.Point(12, 70)
+        Me.btnTest.Location = New System.Drawing.Point(429, 184)
         Me.btnTest.Name = "btnTest"
-        Me.btnTest.Size = New System.Drawing.Size(162, 23)
+        Me.btnTest.Size = New System.Drawing.Size(80, 23)
         Me.btnTest.TabIndex = 4
         Me.btnTest.Text = "Test Button"
         Me.btnTest.UseVisualStyleBackColor = True
         '
         'btnReset
         '
-        Me.btnReset.Location = New System.Drawing.Point(12, 145)
+        Me.btnReset.Location = New System.Drawing.Point(429, 213)
         Me.btnReset.Name = "btnReset"
-        Me.btnReset.Size = New System.Drawing.Size(162, 23)
+        Me.btnReset.Size = New System.Drawing.Size(80, 23)
         Me.btnReset.TabIndex = 5
         Me.btnReset.Text = "Reset Settings"
         Me.btnReset.UseVisualStyleBackColor = True
@@ -95,40 +98,43 @@ Partial Class main
         '
         'btnGetTranscript
         '
+        Me.btnGetTranscript.BackgroundImage = Global.main.My.Resources.Resources.download
+        Me.btnGetTranscript.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
         Me.btnGetTranscript.Enabled = False
-        Me.btnGetTranscript.Location = New System.Drawing.Point(251, 168)
+        Me.btnGetTranscript.Location = New System.Drawing.Point(429, 12)
         Me.btnGetTranscript.Name = "btnGetTranscript"
-        Me.btnGetTranscript.Size = New System.Drawing.Size(162, 23)
+        Me.btnGetTranscript.Size = New System.Drawing.Size(80, 80)
         Me.btnGetTranscript.TabIndex = 7
-        Me.btnGetTranscript.Text = "Get Transcript"
         Me.btnGetTranscript.UseVisualStyleBackColor = True
         '
         'btnDeleteOp
         '
+        Me.btnDeleteOp.BackgroundImage = Global.main.My.Resources.Resources.delete
+        Me.btnDeleteOp.BackgroundImageLayout = System.Windows.Forms.ImageLayout.Stretch
         Me.btnDeleteOp.Enabled = False
-        Me.btnDeleteOp.Location = New System.Drawing.Point(419, 168)
+        Me.btnDeleteOp.Location = New System.Drawing.Point(429, 98)
         Me.btnDeleteOp.Name = "btnDeleteOp"
-        Me.btnDeleteOp.Size = New System.Drawing.Size(162, 23)
+        Me.btnDeleteOp.Size = New System.Drawing.Size(80, 80)
         Me.btnDeleteOp.TabIndex = 8
-        Me.btnDeleteOp.Text = "Delete Operation"
         Me.btnDeleteOp.UseVisualStyleBackColor = True
         '
         'flpOperations
         '
-        Me.flpOperations.Location = New System.Drawing.Point(180, 12)
+        Me.flpOperations.AutoScroll = True
+        Me.flpOperations.Location = New System.Drawing.Point(98, 12)
         Me.flpOperations.Name = "flpOperations"
-        Me.flpOperations.Size = New System.Drawing.Size(401, 150)
+        Me.flpOperations.Size = New System.Drawing.Size(325, 252)
         Me.flpOperations.TabIndex = 9
         '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(593, 206)
+        Me.ClientSize = New System.Drawing.Size(517, 282)
+        Me.Controls.Add(Me.btnReset)
         Me.Controls.Add(Me.flpOperations)
         Me.Controls.Add(Me.btnDeleteOp)
         Me.Controls.Add(Me.btnGetTranscript)
-        Me.Controls.Add(Me.btnReset)
         Me.Controls.Add(Me.btnTest)
         Me.Controls.Add(Me.btnPoll)
         Me.Controls.Add(Me.btnExit)
@@ -137,7 +143,7 @@ Partial Class main
         Me.MaximizeBox = False
         Me.Name = "main"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
-        Me.Text = "Automatic Transcript v1.2"
+        Me.Text = "Automatic Transcript v1.3"
         Me.ResumeLayout(False)
 
     End Sub

@@ -61,6 +61,36 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Bitmap.
+        '''</summary>
+        Friend ReadOnly Property _exit() As System.Drawing.Bitmap
+            Get
+                Dim obj As Object = ResourceManager.GetObject("_exit", resourceCulture)
+                Return CType(obj,System.Drawing.Bitmap)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Bitmap.
+        '''</summary>
+        Friend ReadOnly Property delete() As System.Drawing.Bitmap
+            Get
+                Dim obj As Object = ResourceManager.GetObject("delete", resourceCulture)
+                Return CType(obj,System.Drawing.Bitmap)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Bitmap.
+        '''</summary>
+        Friend ReadOnly Property download() As System.Drawing.Bitmap
+            Get
+                Dim obj As Object = ResourceManager.GetObject("download", resourceCulture)
+                Return CType(obj,System.Drawing.Bitmap)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized resource of type System.Byte[].
         '''</summary>
         Friend ReadOnly Property GoogleCloudSDKInstaller() As Byte()
@@ -83,10 +113,29 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Bitmap.
+        '''</summary>
+        Friend ReadOnly Property poll() As System.Drawing.Bitmap
+            Get
+                Dim obj As Object = ResourceManager.GetObject("poll", resourceCulture)
+                Return CType(obj,System.Drawing.Bitmap)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Bitmap.
+        '''</summary>
+        Friend ReadOnly Property save() As System.Drawing.Bitmap
+            Get
+                Dim obj As Object = ResourceManager.GetObject("save", resourceCulture)
+                Return CType(obj,System.Drawing.Bitmap)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to {
         '''  &quot;config&quot;: {
         '''      &quot;encoding&quot;:&quot;FLAC&quot;,
-        '''      &quot;sampleRateHertz&quot;: 44100,
         '''      &quot;languageCode&quot;: &quot;en-AU&quot;,
         '''      &quot;enableWordTimeOffsets&quot;: true
         '''  },
@@ -95,6 +144,16 @@ Namespace My.Resources
         Friend ReadOnly Property template() As String
             Get
                 Return ResourceManager.GetString("template", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized resource of type System.Drawing.Bitmap.
+        '''</summary>
+        Friend ReadOnly Property upload() As System.Drawing.Bitmap
+            Get
+                Dim obj As Object = ResourceManager.GetObject("upload", resourceCulture)
+                Return CType(obj,System.Drawing.Bitmap)
             End Get
         End Property
     End Module

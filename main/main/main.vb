@@ -6,28 +6,26 @@
 'loading bar
 'dependency unzipping
 'limit concurrent files
+'multi thread for polling
 
 'settings form?
-'input box on top
 'allow viewing and deletion of files in batch
 'remove jobs older than x days
 'delete file after use
-'multi file input
+
+'Error checking whenever a request is made
+
+'Low priority
 'bucket selection
 'unique op names
-'Panel too short for ID
-'Check if connected/authtoken return
-'Error checking whenever a request is made
-'Is the percentage updating?
-
-'Timeout for authToken getting
-
+'Add confidence ratings and check if below a threshold
 
 
 Public Class main
     Dim clickedID As String = ""
 
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        System.Windows.Forms.Form.CheckForIllegalCrossThreadCalls = False
         initialise()
         poll()
     End Sub
@@ -35,7 +33,7 @@ Public Class main
     'Controls
     Private Sub btnImport_Click(sender As Object, e As EventArgs) Handles btnImport.Click 'Import mp3 file(s) for conversion to .flac and .json generation
         With ofdSelect
-            .Filter = "MP3 files (.mp3)|*.mp3"
+            .Filter = "MP3 files (.mp3)|*.mp3|FLAC Audio files (.flac)|*.flac|WAV Audio Files (.wav)|*.wav|All files (*.*)|*.*"
             .Multiselect = True
         End With
         If ofdSelect.ShowDialog() = DialogResult.OK Then
@@ -46,6 +44,8 @@ Public Class main
             End While
 
             If authToken <> "" Then 'Check authentication token actually exists
+                runningTasks = True
+                'loadingScreen.Show()
                 Dim threadList As New List(Of Threading.Thread)
 
                 For Each trackName As String In ofdSelect.FileNames
@@ -57,8 +57,10 @@ Public Class main
                 For Each t In threadList
                     t.Join()
                 Next
-
+                runningTasks = False
+                'loadingScreen.Close()
                 My.Settings.Save()
+                MsgBox("Operation(s) finished.", MsgBoxStyle.ApplicationModal, "Operation(s) finished")
                 poll()
                 ofdSelect.Dispose()
             Else
@@ -75,25 +77,26 @@ Public Class main
         If sampleRateOutsideBounds(input) = True Then
             resample = " -ar 16000"
         End If
-        runCmd("ffmpeg -y -i """ & input & """" & resample & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion forcing resampling if necessary
 
+        runCmd("ffmpeg -y -i """ & input & """" & resample & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion forcing resampling if necessary
+        taskStep = 1
         runCmd("curl -v --upload-file """ & flacTrack & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:audio/flac"" ""https://storage.googleapis.com/lr_test_transcript/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & """") 'Upload file to bucket. Replace all spaces with %20 so curl doesn't throw parsing errors
         IO.File.Delete(flacTrack) 'Clean up flac file after upload
-
+        taskStep = 2
         runCmd("curl -X POST --data-binary @""" & AppDomain.CurrentDomain.BaseDirectory & "\Resources\makePublic.json" & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:application/json"" ""https://www.googleapis.com/storage/v1/b/" & bucket & "/o/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & "/acl""") 'Make file public
-
+        taskStep = 3
         cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(input) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(input) & "\" & IO.Path.GetFileNameWithoutExtension(input) & ".json", False) 'Write .json file in the same directory
         Dim output As String = runCmd("curl -X POST -d @""" & IO.Path.GetDirectoryName(input) & "\" & IO.Path.GetFileNameWithoutExtension(input) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & apiKey & " --header ""Content-Type:application/json""")(0) 'Post for transcription
         IO.File.Delete(IO.Path.GetDirectoryName(input) & "\" & IO.Path.GetFileNameWithoutExtension(input) & ".json") 'Clean up .json file after posting
 
         If checkErrors(output, """name"": """) = False Then
-            Dim opName As String = InputBox("Please enter the name of the operation. This will default to " & IO.Path.GetFileNameWithoutExtension(input) & ".", "Enter operation name") 'New form for inputbox
-            If opName = "" Then
-                opName = IO.Path.GetFileNameWithoutExtension(input)
-            End If
+            'Dim opName As String = InputBox("Please enter the name of the operation. This will default to " & IO.Path.GetFileNameWithoutExtension(input) & ".", "Enter operation name") 'New form for inputbox
+            'If opName = "" Then
+            Dim opName As String = IO.Path.GetFileNameWithoutExtension(input)
+            'End If
             My.Settings.operationsList.Add(cirsfile.parseInString(output, """name"": """, """") & "|" & opName) 'Retrieve the name of the operation and add it to the operations list and then appends it with |JOBNAME
-            MsgBox("File(s) uploaded for transcription.", MsgBoxStyle.ApplicationModal, "Upload Complete")
         End If
+        taskStep = 4
     End Sub
 
     Private Sub btnExit_Click(sender As Object, e As EventArgs) Handles btnExit.Click
@@ -113,7 +116,10 @@ Public Class main
     End Sub
 
     Private Sub btnTest_Click(sender As Object, e As EventArgs) Handles btnTest.Click
-        MsgBox("Nothing!")
+        For Each s In My.Settings.operationsList
+            MsgBox(s)
+        Next
+        'MsgBox("Nothing!")
         'If sfdExport.ShowDialog = DialogResult.OK Then
         'IO.File.WriteAllBytes("C: \Users\rei.kaneko.LONERGAN\Downloads\test\curl.zip", My.Resources.curl)
         'If ofdSelect.ShowDialog = DialogResult.OK Then
@@ -130,10 +136,14 @@ Public Class main
                 runCmd("curl -X GET https://speech.googleapis.com/v1/operations/" & clickedID & "?key=" & apiKey & " > """ & AppDomain.CurrentDomain.BaseDirectory & "temp.txt""") 'Retrieve results of the operation
                 Dim output As String = My.Computer.FileSystem.ReadAllText(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
                 If checkErrors(output, """progressPercent"": ") = False Then
-                    cleanScript(output)
+                    Dim exportName As String = ""
+                    For Each op As String In My.Settings.operationsList
+                        If op.Contains(clickedID) Then
+                            exportName = cirsfile.parseInString(op, "|")
+                        End If
+                    Next
+                    cleanScript(output, exportName)
                 End If
-            Else
-                MsgBox("Operation incomplete. Please re-poll and try again when the operation is done.", MsgBoxStyle.SystemModal, "Operation incomplete")
             End If
             IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "temp.txt")
         Next
@@ -268,6 +278,8 @@ Public Class main
         Else
             btnPoll.Enabled = True
 
+            btnPoll.Enabled = True
+
             Dim cmdList As New List(Of operation) 'List of polling processes
             Dim cmdPollDone As Boolean = False
 
@@ -315,7 +327,7 @@ Public Class main
                     {
                     .Margin = New Padding(3, 3, 3, 3),
                     .Height = 55,
-                    .Width = 190,
+                    .Width = 300,
                     .BackColor = panelColor,
                     .Name = op.id,
                     .Tag = op.progress
@@ -326,6 +338,7 @@ Public Class main
                     .Text = op.id,
                     .Font = New Font("Segoe UI", 9, FontStyle.Bold),
                     .Height = 15,
+                    .Width = 300,
                     .Location = New Point(0, 0),
                     .Name = op.id & ".id"
                     }
@@ -335,6 +348,7 @@ Public Class main
                     .Text = op.name,
                     .Font = New Font("Segoe UI", 8),
                     .Height = 13,
+                    .Width = 300,
                     .Location = New Point(0, 15),
                     .Name = op.id + ".name"
                     }
@@ -362,12 +376,12 @@ Public Class main
         End If
     End Sub
 
-    Private Sub cleanScript(input As String)
+    Private Sub cleanScript(input As String, defaultFileName As String)
         MsgBox("Please select a directory to save the transcript file.")
         With sfdExport
             .Filter = "Text file (.txt)|*.txt"
             .OverwritePrompt = False
-            .FileName = "Output"
+            .FileName = defaultFileName
         End With
         If sfdExport.ShowDialog() = DialogResult.OK Then
             Dim output As String = ""
@@ -383,7 +397,7 @@ Public Class main
     End Sub
 
     'Functions
-    Private Function runCmd(command As String, Optional ByVal waitForExit As Boolean = True, Optional ByVal hidden As Boolean = False) As Object
+    Private Function runCmd(command As String, Optional ByVal waitForExit As Boolean = True, Optional ByVal hidden As Boolean = True) As Object
         Dim output As String = ""
         Dim cmd As New Process
         With cmd
@@ -398,7 +412,7 @@ Public Class main
             .StartInfo.RedirectStandardOutput = True
 
             .Start()
-                If waitForExit = True Then
+            If waitForExit = True Then
                 .WaitForExit()
             End If
         End With
@@ -431,13 +445,17 @@ Public Class main
         For Each panel As Panel In flpOperations.Controls
             If panel.Tag = "Done" Then
                 panel.BackColor = Color.Green
+
             Else
                 panel.BackColor = Color.DeepSkyBlue
+                btnGetTranscript.Enabled = False
             End If
         Next
+        If clicked.Tag = "Done" Then
+            btnGetTranscript.Enabled = True
+        End If
         clicked.BackColor = Color.Orange
         btnDeleteOp.Enabled = True
-        btnGetTranscript.Enabled = True
         clickedID = clicked.Name
     End Sub
 
