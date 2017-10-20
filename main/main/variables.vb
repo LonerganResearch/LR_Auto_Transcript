@@ -3,8 +3,7 @@
     Public apiKey As String = "AIzaSyCwp5oY4JiLi36scDCTJizQ0PDCC1R3rTg"
     Public authToken As String = ""
     Public bucket As String = "lr_test_transcript"
-    Public taskStep As Integer = 1
-    Public runningTasks = False
+    Public operations As New List(Of operation)
 
     Public Class operation
         Property name As String
@@ -13,6 +12,7 @@
         Property output As String
         Property process As Process
     End Class
+
 
     Public processText As String = ""
     '{"Converting to .flac...", "Uploading...", "Setting permissions...", "Posting for transcription...", "Done"}

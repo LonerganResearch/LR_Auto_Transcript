@@ -31,6 +31,7 @@ Partial Class main
         Me.flpOperations = New System.Windows.Forms.FlowLayoutPanel()
         Me.btnSettings = New System.Windows.Forms.Button()
         Me.lblProcess = New System.Windows.Forms.Label()
+        Me.pgbProgress = New System.Windows.Forms.ProgressBar()
         Me.SuspendLayout()
         '
         'btnImport
@@ -81,7 +82,7 @@ Partial Class main
         Me.flpOperations.AutoScroll = True
         Me.flpOperations.Location = New System.Drawing.Point(194, 12)
         Me.flpOperations.Name = "flpOperations"
-        Me.flpOperations.Size = New System.Drawing.Size(385, 166)
+        Me.flpOperations.Size = New System.Drawing.Size(375, 166)
         Me.flpOperations.TabIndex = 9
         '
         'btnSettings
@@ -103,11 +104,21 @@ Partial Class main
         Me.lblProcess.TabIndex = 11
         Me.lblProcess.Text = "Ready"
         '
+        'pgbProgress
+        '
+        Me.pgbProgress.Location = New System.Drawing.Point(469, 184)
+        Me.pgbProgress.Maximum = 4
+        Me.pgbProgress.Name = "pgbProgress"
+        Me.pgbProgress.Size = New System.Drawing.Size(100, 10)
+        Me.pgbProgress.Step = 1
+        Me.pgbProgress.TabIndex = 12
+        '
         'main
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(594, 199)
+        Me.ClientSize = New System.Drawing.Size(575, 199)
+        Me.Controls.Add(Me.pgbProgress)
         Me.Controls.Add(Me.lblProcess)
         Me.Controls.Add(Me.btnSettings)
         Me.Controls.Add(Me.flpOperations)
@@ -118,7 +129,7 @@ Partial Class main
         Me.MaximizeBox = False
         Me.Name = "main"
         Me.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen
-        Me.Text = "Automatic Transcript v1.3"
+        Me.Text = "Automatic Transcript v1.5"
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
@@ -133,4 +144,5 @@ Partial Class main
     Friend WithEvents flpOperations As FlowLayoutPanel
     Friend WithEvents btnSettings As Button
     Friend WithEvents lblProcess As Label
+    Friend WithEvents pgbProgress As ProgressBar
 End Class
