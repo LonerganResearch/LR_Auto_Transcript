@@ -61,7 +61,7 @@ Public Class main
             Else
                 MsgBox("Error retrieving authentication token. Check that you have selected the right Service Account Key file and are connected to the internet.", MsgBoxStyle.SystemModal, "Error retrieving authentication token")
             End If
-            lblProcess.Text = "Ready"
+            reset()
         End If
     End Sub
 
@@ -72,7 +72,7 @@ Public Class main
         If sampleRateOutsideBounds(input) = True Then
             resample = " -ar 16000"
         End If
-        pgbProgress.Step = 1
+        pgbProgress.Value = 1
         lblProcess.Text = "Converting " & IO.Path.GetFileNameWithoutExtension(input) & " to .flac..."
         runCmd("ffmpeg -y -i """ & input & """" & resample & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion forcing resampling if necessary
         pgbProgress.Value = 2
@@ -95,8 +95,6 @@ Public Class main
             'End If
             My.Settings.operationsList.Add(cirsfile.parseInString(output, """name"": """, """") & "|" & opName) 'Retrieve the name of the operation and add it to the operations list and then appends it with |JOBNAME
         End If
-        pgbProgress.Value = 0
-        lblProcess.Text = "Done"
     End Sub
 
     Private Sub btnExit_Click(sender As Object, e As EventArgs) Handles btnExit.Click
@@ -122,14 +120,13 @@ Public Class main
         checkDirs("curl", "curlPath", "https://curl.haxx.se/dlwiz/?type=bin&os=Win64&flav=-&ver=*&cpu=x86_64")
 
         'API key is hardcoded for the time being
-        'If apiKey = "" Then
-        '    apiKey = InputBox("Please paste the API key from APIs > Credentials here.", "Paste API Key")
-        '    If apiKey = "" Then
-        '        MsgBox("An API key is required to transcribe files", MsgBoxStyle.Critical, "Critical Error")
-        '        End
-        '    End If
-        '    My.Settings.Save()
-        'End If
+        If apiKey = "" Then
+            apiKey = InputBox("Please paste the API key from APIs > Credentials here.", "Paste API Key")
+            If apiKey = "" Then
+                MsgBox("An API key is required to transcribe files", MsgBoxStyle.Critical, "Critical Error")
+                End
+            End If
+        End If
 
         If My.Settings.sAKeyPath = "" Then 'Check a Service Account Key has been located
             MsgBox("A Service Account Key is required to interface with Google. It is located by default in L:\Company Administration\Transcripts\serviceAccountKey.json. Please select it.", MsgBoxStyle.SystemModal, "Service Account Key required")
@@ -186,16 +183,14 @@ Public Class main
         End While
 
         MsgBox("Google Cloud SDK is now installing. This may take a while.", MsgBoxStyle.SystemModal, "Installation started")
-        IO.File.WriteAllBytes(AppDomain.CurrentDomain.BaseDirectory & "GoogleCloudSDKInstaller.exe", My.Resources.GoogleCloudSDKInstaller) 'Copy installer from resources
-        runCmd("GoogleCloudSDKInstaller /S /allusers /noreporting /nodesktop /D=" & fbdDir.SelectedPath & "\CloudSDK", , True) 'Install gcloud SDK
-        IO.File.Delete(AppDomain.CurrentDomain.BaseDirectory & "GoogleCloudSDKInstaller.exe") 'Delete original installer
+        runCmd("Resources\GoogleCloudSDKInstaller /S /allusers /noreporting /nodesktop /D=" & fbdDir.SelectedPath & "\CloudSDK", , True) 'Install gcloud SDK
 
         If IO.File.Exists(fbdDir.SelectedPath & "\CloudSDK\uninstaller.exe") Then 'Check that the installation has been completed successfully
             MsgBox("Google Cloud SDK installation complete.", MsgBoxStyle.SystemModal, "Installation completed")
             My.Settings.gcloudPath = fbdDir.SelectedPath & "\CloudSDK\google-cloud-sdk\bin"
             Environment.SetEnvironmentVariable("PATH", Environment.GetEnvironmentVariable("PATH") & ";" & My.Settings.gcloudPath)
         Else
-            MsgBox("Google Cloud SDK installation failed. Please seek an administrator for further assistance.", MsgBoxStyle.Critical, "Critical Error")
+            MsgBox("Google Cloud SDK installation failed. If you keep seeing this error, you can try manually installing the Google Cloud SDK yourself and pointing this program to it. Otherwise, please seek an administrator for further assistance.", MsgBoxStyle.Critical, "Critical Error")
             End
         End If
     End Sub
@@ -235,93 +230,96 @@ Public Class main
             Next
 
             flpOperations.Controls.Clear()
-            'Filling panels
-            For Each op As operation In operations 'Populate to list
-                If checkErrors(op.output, "name"": ") = False Then
-                    Dim getEnabled As Boolean = False
-                    Dim textColor As Color = Color.DeepSkyBlue
-                    If op.progress = "Done" Then
-                        textColor = Color.Green
-                        getEnabled = True
-                    End If
+            populateFlp()
 
-                    Dim newpanel As New Panel With
-                        {
-                        .Margin = New Padding(3, 3, 3, 3),
-                        .Height = 50,
-                        .Width = 340,
-                        .BackColor = Color.LightGray,
-                        .Name = op.id,
-                        .Tag = op.progress
-                        }
-
-                    Dim ID As New Label With
-                        {
-                        .Text = op.id,
-                        .Font = New Font("Segoe UI", 9, FontStyle.Bold),
-                        .Height = 15,
-                        .Width = 250,
-                        .Location = New Point(0, 0),
-                        .Name = op.id & ".id"
-                        }
-
-                    Dim name As New Label With
-                        {
-                        .Text = op.name,
-                        .Font = New Font("Segoe UI", 8),
-                        .Height = 13,
-                        .Width = 250,
-                        .Location = New Point(0, 15),
-                        .Name = op.id + ".name"
-                        }
-
-                    Dim progress As New Label With
-                        {
-                        .Text = op.progress,
-                        .Font = New Font("Segoe UI", 8),
-                        .Height = 13,
-                        .ForeColor = textColor,
-                        .Location = New Point(0, 28),
-                        .Name = op.id + ".progress"
-                        }
-
-                    Dim btnGet As New Button With
-                        {
-                        .Tag = op.id,
-                        .Height = 40,
-                        .Width = 40,
-                        .BackColor = Color.LightSkyBlue,
-                        .BackgroundImage = My.Resources.save,
-                        .BackgroundImageLayout = ImageLayout.Stretch,
-                        .Location = New Point(255, 5),
-                        .Enabled = getEnabled
-                        }
-
-                    Dim btnDel As New Button With
-                        {
-                        .Tag = op.id,
-                        .Height = 40,
-                        .Width = 40,
-                        .BackColor = Color.IndianRed,
-                        .BackgroundImage = My.Resources.delete,
-                        .BackgroundImageLayout = ImageLayout.Stretch,
-                        .Location = New Point(295, 5)
-                        }
-
-                    newpanel.Controls.Add(ID)
-                    newpanel.Controls.Add(name)
-                    newpanel.Controls.Add(progress)
-                    newpanel.Controls.Add(btnGet)
-                    newpanel.Controls.Add(btnDel)
-
-                    flpOperations.Controls.Add(newpanel)
-                    AddHandler btnGet.MouseClick, AddressOf btnGetClicked
-                    AddHandler btnDel.MouseClick, AddressOf btnDelClicked
-                End If
-            Next
-            pgbProgress.Value = 0
-            lblProcess.Text = "Ready"
+            reset()
         End If
+    End Sub
+
+    Private Sub populateFlp() 'Filling flowLayoutPanel
+        For Each op As operation In operations 'Populate to list
+            If checkErrors(op.output, "name"": ") = False Then
+                Dim getEnabled As Boolean = False
+                Dim textColor As Color = Color.DeepSkyBlue
+                If op.progress = "Done" Then
+                    textColor = Color.Green
+                    getEnabled = True
+                End If
+
+                Dim newpanel As New Panel With
+                    {
+                    .Margin = New Padding(3, 3, 3, 3),
+                    .Height = 50,
+                    .Width = 340,
+                    .BackColor = Color.LightGray,
+                    .Name = op.id,
+                    .Tag = op.progress
+                    }
+
+                Dim ID As New Label With
+                    {
+                    .Text = op.id,
+                    .Font = New Font("Segoe UI", 9, FontStyle.Bold),
+                    .Height = 15,
+                    .Width = 250,
+                    .Location = New Point(0, 0),
+                    .Name = op.id & ".id"
+                    }
+
+                Dim name As New Label With
+                    {
+                    .Text = op.name,
+                    .Font = New Font("Segoe UI", 8),
+                    .Height = 13,
+                    .Width = 250,
+                    .Location = New Point(0, 15),
+                    .Name = op.id + ".name"
+                    }
+
+                Dim progress As New Label With
+                    {
+                    .Text = op.progress,
+                    .Font = New Font("Segoe UI", 8),
+                    .Height = 13,
+                    .ForeColor = textColor,
+                    .Location = New Point(0, 28),
+                    .Name = op.id + ".progress"
+                    }
+
+                Dim btnGet As New Button With
+                    {
+                    .Tag = op.id,
+                    .Height = 40,
+                    .Width = 40,
+                    .BackColor = Color.LightSkyBlue,
+                    .BackgroundImage = My.Resources.save,
+                    .BackgroundImageLayout = ImageLayout.Stretch,
+                    .Location = New Point(255, 5),
+                    .Enabled = getEnabled
+                    }
+
+                Dim btnDel As New Button With
+                    {
+                    .Tag = op.id,
+                    .Height = 40,
+                    .Width = 40,
+                    .BackColor = Color.IndianRed,
+                    .BackgroundImage = My.Resources.delete,
+                    .BackgroundImageLayout = ImageLayout.Stretch,
+                    .Location = New Point(295, 5)
+                    }
+
+                newpanel.Controls.Add(ID)
+                newpanel.Controls.Add(name)
+                newpanel.Controls.Add(progress)
+                newpanel.Controls.Add(btnGet)
+                newpanel.Controls.Add(btnDel)
+
+                flpOperations.Controls.Add(newpanel)
+                AddHandler btnGet.MouseClick, AddressOf btnGetClicked
+                AddHandler btnDel.MouseClick, AddressOf btnDelClicked
+            End If
+        Next
     End Sub
 
     Private Sub getOperations(input As String)
@@ -364,6 +362,11 @@ Public Class main
             cirsfile.write(output, sfdExport.FileName, False)
         End If
         sfdExport.Dispose()
+    End Sub
+
+    Private Sub reset()
+        pgbProgress.Value = 0
+        lblProcess.Text = "Ready"
     End Sub
 
     'Functions

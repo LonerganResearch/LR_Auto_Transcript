@@ -120,13 +120,12 @@
     <None Include="Resources\makePublic.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Resources\serviceAccountKey.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Include="Resources\template.json" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\GoogleCloudSDKInstaller.exe" />
+    <None Include="Resources\GoogleCloudSDKInstaller.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Import Include="main.My.Resources" />
