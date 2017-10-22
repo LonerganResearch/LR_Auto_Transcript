@@ -107,21 +107,6 @@ Public Class main
         poll()
     End Sub
 
-    Private Sub btnTest_Click(sender As Object, e As EventArgs)
-        For Each s In My.Settings.operationsList
-            MsgBox(s)
-        Next
-        'MsgBox("Nothing!")
-        'If sfdExport.ShowDialog = DialogResult.OK Then
-        'IO.File.WriteAllBytes("C: \Users\rei.kaneko.LONERGAN\Downloads\test\curl.zip", My.Resources.curl)
-        'If ofdSelect.ShowDialog = DialogResult.OK Then
-        '    If fbdDir.ShowDialog = DialogResult.OK Then
-        '        'Unzip
-        '    End If
-        'End If
-        'End If
-    End Sub
-
     'Subs
     Private Sub initialise()
         If My.Settings.varPath = "" Then
