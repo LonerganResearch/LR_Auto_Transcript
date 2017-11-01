@@ -2,7 +2,6 @@
 
 'To do
 'High Priority
-'Sample rate changing
 'dependency unzipping
 'limit concurrent files
 
@@ -21,6 +20,7 @@
 
 Public Class main
     Private Sub main_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        System.Windows.Forms.Form.CheckForIllegalCrossThreadCalls = False
         initialise()
         poll()
     End Sub
@@ -31,13 +31,16 @@ Public Class main
             .Filter = "MP3 files (.mp3)|*.mp3|FLAC Audio files (.flac)|*.flac|WAV Audio Files (.wav)|*.wav|M4A Audio Files (.m4a)|*.m4a|All files (*.*)|*.*"
             .Multiselect = True
         End With
+
         If ofdSelect.ShowDialog() = DialogResult.OK Then
             lblProcess.Text = "Getting authentication token..."
+
             Dim i As Integer = 1
             While authToken = "" And i < 3 'Retry getAuthToken 3 times
                 getAuthToken()
                 i += 1
             End While
+
             Dim opThread As Threading.Thread
             If authToken <> "" Then 'Check authentication token actually exists
                 pgbProgress.Visible = True
@@ -72,17 +75,21 @@ Public Class main
         If sampleRateOutsideBounds(input) = True Then
             resample = " -ar 16000"
         End If
+
         pgbProgress.Value = 1
         lblProcess.Text = "Converting " & IO.Path.GetFileNameWithoutExtension(input) & " to .flac..."
         runCmd("ffmpeg -y -i """ & input & """" & resample & " -ac 1 """ & flacTrack & """") 'MP3 to FLAC conversion forcing resampling if necessary
+
         pgbProgress.Value = 2
         lblProcess.Text = "Uploading " & IO.Path.GetFileNameWithoutExtension(input) & "..."
         runCmd("curl -v --upload-file """ & flacTrack & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:audio/flac"" ""https://storage.googleapis.com/lr_test_transcript/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & """") 'Upload file to bucket. Replace all spaces with %20 so curl doesn't throw parsing errors
         IO.File.Delete(flacTrack) 'Clean up flac file after upload
+
         pgbProgress.Value = 3
         lblProcess.Text = "Setting permissions..."
         runCmd("curl -X POST --data-binary @""" & AppDomain.CurrentDomain.BaseDirectory & "\Resources\makePublic.json" & """ -H ""Authorization: Bearer " & authToken & """ -H ""Content-Type:application/json"" ""https://www.googleapis.com/storage/v1/b/" & bucket & "/o/" & IO.Path.GetFileName(flacTrack).Replace(" ", "%20") & "/acl""") 'Make file public
         cirsfile.write(My.Resources.template.ToString & vbNewLine & "      ""uri"":""gs://" & bucket & "/" & IO.Path.GetFileNameWithoutExtension(input) & ".flac""" & vbNewLine & "  }" & vbNewLine & "}", IO.Path.GetDirectoryName(input) & "\" & IO.Path.GetFileNameWithoutExtension(input) & ".json", False) 'Write .json file in the same directory
+
         pgbProgress.Value = 4
         lblProcess.Text = "Posting " & IO.Path.GetFileNameWithoutExtension(input) & " for transcription..."
         Dim output As String = runCmd("curl -X POST -d @""" & IO.Path.GetDirectoryName(input) & "\" & IO.Path.GetFileNameWithoutExtension(input) & ".json""" & " https://speech.googleapis.com/v1/speech:longrunningrecognize?key=" & apiKey & " --header ""Content-Type:application/json""")(0) 'Post for transcription
@@ -103,6 +110,14 @@ Public Class main
 
     Private Sub btnPoll_Click(sender As Object, e As EventArgs) Handles btnPoll.Click
         poll()
+    End Sub
+
+    Private Sub btnSettings_Click(sender As Object, e As EventArgs) Handles btnSettings.Click
+        If MsgBox("Are you sure you want to clear all program settings and respecify dependencies?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Clear Application Settings?") = MsgBoxResult.Yes Then
+            My.Settings.Reset()
+            Environment.SetEnvironmentVariable("PATH", My.Settings.varPath)
+            initialise()
+        End If
     End Sub
 
     'Subs
@@ -158,6 +173,7 @@ Public Class main
                     Else
                         installGcloud()
                     End If
+
                 Case Else
                     MsgBox("The directory for " & program & " has not been specified. Please select the 'bin' folder containing " & program, MsgBoxStyle.SystemModal, "Dependency Not Found")
                     While fbdDir.ShowDialog() <> DialogResult.OK Or Not IO.File.Exists(fbdDir.SelectedPath & "\" & program & ".exe")
@@ -318,6 +334,8 @@ Public Class main
                 flpOperations.Controls.Add(newpanel)
                 AddHandler btnGet.MouseClick, AddressOf btnGetClicked
                 AddHandler btnDel.MouseClick, AddressOf btnDelClicked
+            ElseIf MsgBox("Delete operation " & op.name & "?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Delete operation?") = MsgBoxResult.Yes Then
+                deleteOp(op.id)
             End If
         Next
     End Sub
@@ -367,6 +385,17 @@ Public Class main
     Private Sub reset()
         pgbProgress.Value = 0
         lblProcess.Text = "Ready"
+    End Sub
+
+    Private Sub deleteOp(opTarget As String)
+        Dim target As String = ""
+        For Each op As String In My.Settings.operationsList
+            If op.Contains(opTarget) Then
+                target = op
+            End If
+        Next
+        My.Settings.operationsList.Remove(target)
+        My.Settings.Save()
     End Sub
 
     'Functions
@@ -430,23 +459,8 @@ Public Class main
     Private Sub btnDelClicked(sender As Object, e As EventArgs)
         Dim clicked As Button = sender
         If MsgBox("This will permanently remove this operation from the list. The transcript file will be UNRECOVERABLE. Are you sure you want to proceed?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Remove operation permanently?") = MsgBoxResult.Yes Then
-            Dim target As String = ""
-            For Each op As String In My.Settings.operationsList
-                If op.Contains(clicked.Tag) Then
-                    target = op
-                End If
-            Next
-            My.Settings.operationsList.Remove(target)
-            My.Settings.Save()
+            deleteOp(clicked.Tag)
             poll()
-        End If
-    End Sub
-
-    Private Sub btnSettings_Click(sender As Object, e As EventArgs) Handles btnSettings.Click
-        If MsgBox("Are you sure you want to clear all program settings and respecify dependencies?", MsgBoxStyle.YesNo + MsgBoxStyle.SystemModal, "Clear Application Settings?") = MsgBoxResult.Yes Then
-            My.Settings.Reset()
-            Environment.SetEnvironmentVariable("PATH", My.Settings.varPath)
-            initialise()
         End If
     End Sub
 End Class
